@@ -1,0 +1,5 @@
+- name: Playbook automatisation openldap
+  hosts: ldap_servers
+  become: true
+  roles:
+    - openldap_installation

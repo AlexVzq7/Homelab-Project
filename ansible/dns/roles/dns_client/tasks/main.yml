@@ -1,0 +1,28 @@
+- name: Install dig package
+  ansible.builtin.apt:
+    name: dnsutils
+    state: present
+
+- name: Déposer le fichier netplan dédié au DNS
+  ansible.builtin.copy:
+    dest: /etc/netplan/99-dns.yaml
+    mode: "0600"
+    content: |
+      network:
+        version: 2
+        ethernets:
+          {{ ansible_default_ipv4.interface }}:
+            nameservers:
+              addresses: [{{ dns_server }}]
+              search: [{{ dns_search_domain }}]
+  notify: Appliquer netplan
+  
+
+- name: Vérifier la résolution via dns-1
+  ansible.builtin.command: "dig +short vault.homelab.local"
+  register: dig_result
+  changed_when: false
+
+- name: Afficher le résultat de la vérification
+  ansible.builtin.debug:
+    var: dig_result.stdout_lines

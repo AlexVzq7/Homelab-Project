@@ -1,0 +1,32 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/openldap_installation
+
+- name: Installer la dépendance python pour les modules Ansible LDAP
+  ansible.builtin.apt:
+    name: python3-ldap
+    state: present
+    update_cache: true
+
+- name: Preconfiguration du mot de passe de slapd avec debconf
+  ansible.builtin.debconf:
+    name: slapd
+    question: "{{ item.question }}"
+    value: "{{ item.value }}"
+    vtype: "{{ item.vtype }}"
+  loop:
+    - { question: "slapd/root_password", value: "{{ ldap_admin_password }}", vtype: "password" }
+    - { question: "slapd/root_password_again", value: "{{ ldap_admin_password }}", vtype: "password" }
+
+- name: Installer le serveur Openldap et les utilitaires
+  ansible.builtin.apt:
+    name:
+      - slapd
+      - ldap-utils
+    state: present
+
+- name: S'assurer que le server Openldap est démarré et activé
+  ansible.builtin.systemd:
+    name: slapd
+    state: started
+    enabled: true

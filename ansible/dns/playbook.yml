@@ -1,0 +1,11 @@
+- name: Playbook automatisation DNS clients
+  hosts: dns_clients
+  become: true
+  roles:
+    - dns_client
+
+- name: Déployer la zone Bind9
+  hosts: dns_server 
+  become: true 
+  roles: 
+    - bind_zone

@@ -1,0 +1,6 @@
+- name: Déployer le fichier de zone homelab.local
+  ansible.builtin.template:
+    src: db.homelab.local.j2
+    dest: "{{ zone_file }}"
+    validate: "named-checkzone {{ zone_name }} %s"
+  notify: Recharger la zone BIND

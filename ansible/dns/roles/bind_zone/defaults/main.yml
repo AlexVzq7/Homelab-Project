@@ -1,0 +1,10 @@
+zone_name: "homelab.local"
+zone_file: "/etc/bind/db.homelab.local"
+zone_ns: "dns-1.homelab.local."
+zone_admin_email: "admin.homelab.local."
+
+zone_records:
+  - { name: "dns-1", ip: "192.168.1.106" }
+  - { name: "ca", ip: "192.168.1.105" }
+  - { name: "vault", ip: "192.168.1.104" }
+  - { name: "openldap", ip: "192.168.1.103" }

@@ -1,0 +1,2 @@
+dns_server: "192.168.1.106"
+dns_search_domain: "homelab.local"

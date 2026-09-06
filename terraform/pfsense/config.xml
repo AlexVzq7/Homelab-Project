@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<pfsense>
+  <version>2.8.1</version> <system>
+    <hostname>pfsense</hostname>
+    <domain>home.arpa</domain>
+    <enablesshd>yes</enablesshd>
+    <sshport></sshport>
+    
+    <user>
+      <name>admin</name>
+      <descr><![CDATA[System Administrator]]></descr>
+      <scope>system</scope>
+      <groupname>admins</groupname>
+      <priv>user-shell-access</priv>
+      <authorizedkeys>ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCo7DCFEdSIvyewpAkgqLzfc78Smu0B6qEwNrQvCTzijl+NqH3quULyxHZFe2NMbtGyW/9K6Q6K0vVGDu6ah4fj+xwelwKzp4WPXwTHasrt7cllVCyjHPt5mVcPhhwqXT6BMll3Bdv2rPR4m0QDPL7Nzl4SVMmvqkb9y+iTSf6fcbpcfM3+f6RyK9xg8+MWITIYSTMLW1AjyD6mUeeq/KvfuDIBjpa5t9tjPvlUueIVL2SsHbKgvGUTmb0gGKvEH/Gf7Qi4W+o8CKzUgU2QNniYkkuSwfj+qTCKWLRqgfi3wmPkg4N97fy6iSdPDNFYHrsrBHXjD65bJmzON4zAgbeaDGRxlJWRqk5CXjhCM6udvHGHhJIojf83yGTpWvqrdLU2mmnG7cmtwCXd0o3Bu1hm296VzI4aEV5gf8EyT5659mt2dOD3GJkiBwHvXpMjyCf0MHJsRPliJYtieG1l8Uo3w3WzV962MdcYC3pJz+F734u9dZ5ge8r1KVQLK/g7+xVfvtQyLxnhVfdB5UMDKz/xZULJ/YS35/2+oYFBHnMXZXZPANtKlIH4RufKSK/ia7+QwuE735K0oxr2lEjQo5aAiXe3zzNpfxMnOk+7msRXt15/wgD0QDNwvzHUAkcLFgThY9NydV7wI65kQztdZjkuDOopltS08f//qJ1blj/2Ow== root@ansible-node</authorizedkeys>
+    </user>
+  </system>
+
+  <interfaces>
+    <wan>
+      <if>vtnet0</if>
+      <ipaddr>10.168.168.231</ipaddr>
+      <subnet>24</subnet>
+      <gateway>10.168.168.1</gateway>
+    </wan>
+    <lan>
+      <if>vtnet1</if>
+      <ipaddr>192.168.1.2</ipaddr>
+      <subnet>24</subnet>
+    </lan>
+  </interfaces>
+
+  <filter>
+    <rule>
+      <type>pass</type>
+      <interface>lan</interface>
+      <ipprotocol>inet</ipprotocol>
+      <protocol>any</protocol>
+      <source><address>any</address></source>
+      <destination><address>any</address></destination>
+      <descr>Allow all on LAN for Ansible</descr>
+    </rule>
+    <rule>
+      <type>pass</type>
+      <interface>wan</interface>
+      <ipprotocol>inet</ipprotocol>
+      <protocol>tcp</protocol>
+      <source><address>any</address></source>
+      <destination><network>wanip</network><port>22</port></destination>
+      <descr>Allow SSH on WAN for Ansible</descr>
+    </rule>
+  </filter>
+</pfsense>

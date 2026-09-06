@@ -1,0 +1,59 @@
+# ===== Terraform =====
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+tf_debug.log
+*.tfplan
+
+# Terraform variable files (contiennent les secrets d'API)
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+
+# ===== Ansible =====
+*vault_pass*
+.vault_pass
+*.retry
+.ansible/
+
+# ===== Certificats / cles / VPN =====
+*.pem
+*.key
+*.crt
+*.ovpn
+*.p12
+*.pfx
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+
+# ===== Fichiers d'environnement =====
+.env
+.env.*
+!.env.example
+
+# ===== Vaultwarden (contient tous les mots de passe) =====
+**/vw-data/
+
+# ===== Kubeconfig =====
+kubeconfig*
+*.kubeconfig
+
+# ===== Dossier d'archive (brouillons obsoletes, non suivi) =====
+_archive/
+
+# ===== OS / editeurs =====
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
