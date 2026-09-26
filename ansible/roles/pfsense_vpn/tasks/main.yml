@@ -1,0 +1,12 @@
+---
+- name: "Phase 1 : Configuration Interfaces"
+  ansible.builtin.import_tasks: interfaces.yml
+
+- name: "Phase 2 : Serveur VPN & Certificats"
+  ansible.builtin.import_tasks: vpn_server.yml
+
+- name: "Phase 3 : Routage et NAT"
+  ansible.builtin.import_tasks: routing.yml
+
+- name: "Phase 4 : Export des configurations VPN"
+  ansible.builtin.import_tasks: export_vpn.yml

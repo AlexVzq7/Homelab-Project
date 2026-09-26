@@ -1,0 +1,47 @@
+---
+- name: "Vérifier si le WAN est déjà parfaitement configuré"
+  pfsensible.core.pfsense_phpshell:
+    cmd: |
+      global $config;
+      $gw = isset($config['interfaces']['wan']['gateway']) ? $config['interfaces']['wan']['gateway'] : '';
+      $ip = isset($config['interfaces']['wan']['ipaddr']) ? $config['interfaces']['wan']['ipaddr'] : '';
+      
+      if ($gw == '{{ gateway_name }}' && $ip == '{{ wan_ip }}') {
+          echo "ETAT=DEJA_BON";
+      } else {
+          echo "ETAT=A_FAIRE";
+      }
+  register: scout_wan
+  changed_when: false
+
+- name: "1. Amorcer l'IP statique (Seulement si nécessaire)"
+  pfsensible.core.pfsense_interface:
+    interface: "{{ wan_interface }}"
+    descr: "WAN"
+    enable: true
+    ipv4_type: "static"
+    ipv4_address: "{{ wan_ip }}"
+    ipv4_prefixlen: "{{ wan_prefix }}"
+    blockpriv: false
+    state: present
+  when: "'ETAT=A_FAIRE' in scout_wan.stdout"
+
+- name: "2. Ajouter la passerelle par défaut (Seulement si nécessaire)"
+  pfsensible.core.pfsense_gateway:
+    name: "{{ gateway_name }}"
+    interface: "wan"
+    gateway: "{{ gateway_ip }}"
+    state: present
+  when: "'ETAT=A_FAIRE' in scout_wan.stdout"
+
+- name: "3. Configuration finale (IP + Passerelle)"
+  pfsensible.core.pfsense_interface:
+    interface: "{{ wan_interface }}"
+    descr: "WAN"
+    enable: true
+    ipv4_type: "static"
+    ipv4_address: "{{ wan_ip }}"
+    ipv4_prefixlen: "{{ wan_prefix }}"
+    ipv4_gateway: "{{ gateway_name }}"
+    blockpriv: false
+    state: present

@@ -1,0 +1,55 @@
+---
+- name: "Install packages"
+  package:
+    name:
+      - pfSense-pkg-sudo
+    state: present
+
+- name: "Création de la CA"
+  pfsensible.core.pfsense_ca:
+    name: "PFSENSE_CA"
+    digest_alg: sha256
+    dn_city: "Paris"
+    dn_commonname: "OPEN_VPN_CA"
+    dn_country: "FR"
+    dn_organization: "Driss_ALEX_corp"
+    keylen: "4096"
+    keytype: RSA
+    method: internal
+    state: present 
+
+- name: "Création du Certificat Serveur"
+  pfsensible.core.pfsense_cert:
+    name: "OPEN_VPN_SERVER_CERT"
+    ca: "PFSENSE_CA"
+    certtype: "server"
+    digestalg: sha256
+    keylen: 4096
+    method: internal
+    state: present
+
+- name: "Création des Certificats Clients"
+  pfsensible.core.pfsense_cert:
+    name: "{{ item.cert_name }}"
+    ca: "PFSENSE_CA"
+    certtype: "user"
+    digestalg: sha256
+    keylen: 4096
+    method: internal
+    state: present
+  loop: "{{ vpn_users }}"
+
+- name: "Configuration de l'instance OpenVPN"
+  pfsensible.core.pfsense_openvpn_server: 
+    name: 'OpenVPN_Server'
+    ca: "PFSENSE_CA"
+    cert: "OPEN_VPN_SERVER_CERT"
+    tunnel_network: "{{ vpn_tunnel_network }}"
+    local_network: "{{ vpn_local_networks }}"
+    mode: server_tls
+    interface: wan
+    protocol: UDP4
+    local_port: "{{ vpn_port }}"
+    client2client: true 
+    dns_server1: 8.8.8.8
+    dns_server2: 1.1.1.1

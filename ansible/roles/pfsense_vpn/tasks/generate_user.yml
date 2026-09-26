@@ -1,0 +1,26 @@
+---
+- name: "Récupération du certificat pour {{ item.name }}"
+  community.general.xml:
+    path: /tmp/pfsense_config.xml
+    xpath: "//cert[descr='{{ item.cert_name}}']/crt"
+    content: "text"
+  register: current_cert 
+  delegate_to: localhost
+
+- name: "Récupération Private Key pour {{ item.name }}"
+  community.general.xml:
+    path: /tmp/pfsense_config.xml
+    xpath: "//cert[descr='{{ item.cert_name }}']/prv"
+    content: "text"
+  register: current_key 
+  delegate_to: localhost
+
+- name: "Création du fichier ovpn pour {{ item.name }}"
+  ansible.builtin.template:
+    src: client.j2
+    dest: "outputs/{{ item.name }}VPN.ovpn"
+  vars:
+    vpn_ca_cert: "{{ ca_node.matches[0].crt | b64decode }}"
+    vpn_client_cert: "{{ current_cert.matches[0].crt | b64decode }}"
+    vpn_client_key: "{{ current_key.matches[0].prv | b64decode }}"
+  delegate_to: localhost

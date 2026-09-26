@@ -1,0 +1,19 @@
+client
+dev tun
+proto udp
+remote {{ ip_publique }} {{ port_vpn }}
+cipher AES-256-GCM
+auth SHA256
+resolv-retry infinite
+nobind
+remote-cert-tls server
+
+<ca>
+{{ vpn_ca_cert }}
+</ca>
+<cert>
+{{ vpn_client_cert }}
+</cert>
+<key>
+{{ vpn_client_key }}
+</key>

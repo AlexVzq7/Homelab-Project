@@ -1,0 +1,19 @@
+---
+# --- Interfaces & Passerelle ---
+wan_interface: "vtnet0"
+wan_ip: "10.168.168.230"
+wan_prefix: 24
+gateway_name: "GW_NETGEAR"
+gateway_ip: "10.168.168.1"
+
+# --- VPN Server ---
+vpn_port: 33298
+vpn_tunnel_network: "10.50.20.0/24"
+vpn_local_networks: "192.168.1.0/24, 10.168.168.0/24"
+
+# --- Utilisateurs VPN ---
+vpn_users:
+  - { name: 'Alex', cert_name: 'OPEN_VPN_CLIENT_ALEX_CERT' }
+  - { name: 'Driss', cert_name: 'OPEN_VPN_CLIENT_DRISS_CERT' }
+  - { name: 'Fabio', cert_name: 'OPEN_VPN_CLIENT_Fabio_CERT' }
+  - { name: 'Thomas', cert_name: 'OPEN_VPN_CLIENT_Thomas_CERT' }

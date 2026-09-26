@@ -1,0 +1,13 @@
+# Playbook maître : importe tous les playbooks du homelab.
+# Pour cibler un seul morceau, utiliser directement : ansible-playbook dns.yml (ou openldap.yml, openbao.yml, pfsense-vpn.yml)
+- name: Homelab - DNS (BIND9)
+  import_playbook: dns.yml
+
+- name: Homelab - OpenLDAP
+  import_playbook: openldap.yml
+
+- name: Homelab - OpenBao
+  import_playbook: openbao.yml
+
+- name: Homelab - pfSense / VPN
+  import_playbook: pfsense-vpn.yml

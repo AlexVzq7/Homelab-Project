@@ -1,3 +1,0 @@
-[submodule "ansible/pfsense-vpn"]
-	path = ansible/pfsense-vpn
-	url = https://github.com/MirDriss/pfsense-homelab-ansible.git

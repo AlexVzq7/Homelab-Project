@@ -1,0 +1,48 @@
+---
+- name: "Forcer le mode hybride et vérifier"
+  pfsensible.core.pfsense_phpshell:
+    cmd: |
+      global $config;
+      if ($config['nat']['outbound']['mode'] !== 'hybrid') {
+          $config['nat']['outbound']['mode'] = 'hybrid';
+          write_config("Mode NAT force via Ansible");
+          require_once("filter.inc");
+          filter_configure();
+          echo "ETAT=MODIFIE";
+      } else {
+          echo "ETAT=DEJA_BON";
+      }
+  register: php_result
+  changed_when: "'ETAT=MODIFIE' in php_result.stdout"
+
+- name: "Nat Outbound pour trafic VPN"
+  pfsensible.core.pfsense_nat_outbound:
+    descr: "NAT Outbound traffic"
+    interface: wan
+    source: "{{ vpn_tunnel_network }}"
+    destination: any
+    state: present
+    protocol: any
+
+- name: "Règle Firewall - Autoriser port VPN sur WAN"
+  pfsensible.core.pfsense_rule:
+    name: 'Autoriser port VPN sur le WAN'
+    action: 'pass'
+    interface: wan
+    protocol: udp
+    source: any
+    destination: "(self)"
+    destination_port: "{{ vpn_port }}"
+    state: present
+    ipprotocol: inet
+
+- name: "Règle Firewall - Autoriser le trafic sortant du tunnel"
+  pfsensible.core.pfsense_rule:
+    name: "Autoriser depuis OPENVPN"
+    interface: openvpn
+    destination: any
+    action: pass
+    protocol: any
+    source: "{{ vpn_tunnel_network }}"
+    state: present
+    ipprotocol: inet

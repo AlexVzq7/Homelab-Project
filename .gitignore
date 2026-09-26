@@ -24,6 +24,7 @@ tf_debug.log
 .vault_pass
 *.retry
 .ansible/
+ansible/outputs/
 
 # ===== Certificats / cles / VPN =====
 *.pem

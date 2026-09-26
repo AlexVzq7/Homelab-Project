@@ -1,0 +1,28 @@
+---
+- name: "Découverte de l'ip publique"
+  ansible.builtin.uri:
+    url: https://api.ipify.org
+    return_content: yes
+  register: public_ip
+  delegate_to: localhost
+  
+- name: "Récupération du config.xml"
+  ansible.builtin.fetch:
+    src: /conf/config.xml
+    dest: /tmp/pfsense_config.xml
+    flat: yes
+  
+- name: "Extraction de la CA"
+  community.general.xml:
+    path: /tmp/pfsense_config.xml
+    xpath: "//ca[descr='PFSENSE_CA']/crt"
+    content: "text"
+  register: ca_node
+  delegate_to: localhost
+
+- name: "Lancement de l'ouvrier pour chaque user"
+  include_tasks: generate_user.yml
+  loop: "{{ vpn_users }}"
+  vars:
+    ip_publique: "{{ public_ip.content }}"
+    port_vpn: "{{ vpn_port }}" 
