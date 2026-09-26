@@ -1,0 +1,37 @@
+services:
+  openbao:
+    image: "{{ openbao_image }}"
+    container_name: openbao
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    ports:
+      - "127.0.0.1:8200:8200"
+    volumes:
+      - ./openbao-data:/openbao/data
+      - ./openbao.hcl:/openbao/config/openbao.hcl:ro
+    command: ["server"]
+    networks:
+      - openbao-net
+
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./step_root_ca.crt:/etc/caddy/step_root_ca.crt
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - openbao-net
+
+networks:
+  openbao-net:
+
+volumes:
+  caddy-data:
+  caddy-config:

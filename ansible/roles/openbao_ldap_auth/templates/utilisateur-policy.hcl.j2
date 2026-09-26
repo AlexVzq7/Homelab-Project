@@ -1,0 +1,15 @@
+# Lecture seule sur un secret partagé par toute l'équipe
+path "{{ openbao_kv_mount }}/data/demo/*" {
+  capabilities = ["read"]
+}
+path "{{ openbao_kv_mount }}/metadata/demo/*" {
+  capabilities = ["read", "list"]
+}
+
+# Accès complet, mais UNIQUEMENT dans son propre espace personnel
+path "{{ openbao_kv_mount }}/data/users/{% raw %}{{identity.entity.aliases.{% endraw %}{{ ldap_auth_accessor }}{% raw %}.name}}{% endraw %}/*" {
+  capabilities = ["create", "read", "update", "delete", "list"]
+}
+path "{{ openbao_kv_mount }}/metadata/users/{% raw %}{{identity.entity.aliases.{% endraw %}{{ ldap_auth_accessor }}{% raw %}.name}}{% endraw %}/*" {
+  capabilities = ["read", "list"]
+}

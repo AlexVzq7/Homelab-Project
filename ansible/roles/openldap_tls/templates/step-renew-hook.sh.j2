@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+chown {{ slapd_user }}:{{ slapd_group }} {{ ldap_tls_cert }} {{ ldap_tls_key }}
+systemctl restart slapd

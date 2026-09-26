@@ -1,0 +1,8 @@
+---
+- name: Configurer l'auth LDAP sur OpenBao
+  hosts: localhost
+  gather_facts: false
+  vars_files:
+    - inventory/group_vars/openbao_server.yml
+  roles:
+    - openbao_ldap_auth

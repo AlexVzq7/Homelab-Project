@@ -7,34 +7,42 @@ Infrastructure as Code for my personal homelab: VM provisioning on Proxmox and n
 ```
 homelab/
 ├── ansible/
-│   ├── dns/            # Ansible project for BIND9 (zone homelab.local) - contains roles: bind_zone, dns_client
-│   ├── openldap/       # Ansible project for OpenLDAP - contains roles: openldap_installation, openldap_content
-│   └── pfsense-vpn/    # Git submodule -> github.com/MirDriss/pfsense-homelab-ansible - contains role: pfsense_vpn
+│   ├── ansible.cfg
+│   ├── .vault_pass       # Ansible Vault password (gitignored, not in this repo)
+│   ├── inventory/
+│   │   ├── hosts.yml      # single inventory for the whole homelab
+│   │   └── group_vars/
+│   ├── roles/             # every role lives here
+│   │   ├── bind_zone/
+│   │   ├── dns_client/
+│   │   ├── openldap_installation/
+│   │   ├── openldap_content/
+│   │   ├── openbao/
+│   │   └── pfsense_vpn/
+│   ├── outputs/            # generated OpenVPN client configs (.ovpn), gitignored
+│   ├── dns.yml             # per-topic playbooks
+│   ├── openldap.yml
+│   ├── openbao.yml
+│   ├── pfsense-vpn.yml
+│   └── site.yml             # imports all of the above
 └── terraform/
     ├── proxmox/         # VM provisioning (bpg/telmate provider) on the Proxmox cluster
     └── pfsense/         # Terraform deployment of the pfSense firewall
 ```
 
-**Note on Ansible:** each subfolder under `ansible/` (`dns/`, `openldap/`, `pfsense-vpn/`) is a self-contained Ansible project — it has its own `ansible.cfg`, `inventory/`, and playbook — it is **not** a role itself. The actual Ansible roles live one level deeper, inside each project's own `roles/` subfolder (e.g. `ansible/dns/roles/bind_zone/`).
+**Note on Ansible:** all roles now live under one shared `ansible/roles/` directory with a single `ansible.cfg` and inventory, following the [official Ansible sample layout](https://docs.ansible.com/ansible/latest/tips_tricks/sample_setup.html). Each topic (dns, openldap, openbao, pfsense-vpn) still has its own playbook at the root of `ansible/`, so each can be deployed independently. `pfsense_vpn` used to be a separate git submodule (`github.com/MirDriss/pfsense-homelab-ansible`); it is now a regular role in this repo.
 
 ## Requirements
 
 - Terraform
 - Ansible
 - API access (token) to the Proxmox cluster
-- git with submodule support
 
 ## Installation
 
 ```bash
-git clone --recurse-submodules <REPO_URL>
+git clone <REPO_URL>
 cd homelab
-```
-
-If the repo was already cloned without submodules:
-
-```bash
-git submodule update --init --recursive
 ```
 
 ## Usage
@@ -55,20 +63,43 @@ cd terraform/pfsense
 terraform init && terraform apply
 ```
 
-Additional automation (VPN, users) lives in the `ansible/pfsense-vpn` submodule.
-
 ### Deploy DNS (BIND9)
 
 ```bash
-cd ansible/dns
-ansible-playbook -i inventory/hosts.yml playbook.yml
+cd ansible
+ansible-playbook dns.yml
 ```
 
 ### Deploy OpenLDAP
 
 ```bash
-cd ansible/openldap
-ansible-playbook -i inventory/hosts.yml playbook.yml --vault-password-file .vault_pass
+cd ansible
+ansible-playbook openldap.yml
+```
+
+(the Ansible Vault password is read automatically from `ansible/.vault_pass`, per `ansible.cfg`)
+
+### Deploy OpenBao (secrets management, replaces Vaultwarden on `vault`)
+
+```bash
+cd ansible
+ansible-playbook openbao.yml
+```
+
+Role details and variables: `ansible/roles/openbao/README.md` (still being filled in).
+
+### Deploy the pfSense / OpenVPN role
+
+```bash
+cd ansible
+ansible-playbook pfsense-vpn.yml
+```
+
+### Deploy everything
+
+```bash
+cd ansible
+ansible-playbook site.yml
 ```
 
 ## Security
@@ -79,8 +110,9 @@ This repository contains no secrets in plain text. The following files/folders a
 |--------------------------------------|-----------------------------------------------|
 | `*.tfvars`                           | Proxmox / pfSense API tokens                  |
 | `*.tfstate`, `*.tfstate.*`           | Terraform state (may expose sensitive data)   |
-| `.vault_pass`                        | Ansible vault password (OpenLDAP)             |
+| `ansible/.vault_pass`                | Ansible vault password (OpenLDAP)             |
 | `*.pem`, `*.key`, `*.crt`, `*.ovpn`  | Certificates and private keys                 |
+| `ansible/outputs/`                   | Generated OpenVPN client configs              |
 
 See the [`.gitignore`](./.gitignore) file for the full list.
 

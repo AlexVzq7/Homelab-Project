@@ -1,0 +1,99 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for roles/openldap_tls
+- name: Télécharger le paquet .deb du CLI step
+  ansible.builtin.get_url:
+    url: "{{ step_cli_deb_url }}"
+    dest: "/tmp/step-cli_{{ step_cli_version }}_amd64.deb"
+    mode: "0644"
+
+- name: Installer le CLI step
+  ansible.builtin.apt:
+    deb: "/tmp/step-cli_{{ step_cli_version }}_amd64.deb"
+
+
+- name: Créer le dossier pour les certificats TLS LDAP
+  ansible.builtin.file:
+    path: /etc/ldap/tls
+    state: directory
+    owner: root
+    group: "{{ slapd_group }}"
+    mode: "0755"
+
+- name: Récupérer le certificat racine de la step-ca
+  ansible.builtin.command:
+    cmd: >
+      step ca root {{ ldap_tls_ca }}
+      --ca-url {{ step_ca_url }}
+      --fingerprint {{ step_ca_root_fingerprint }}
+  args:
+    creates: "{{ ldap_tls_ca }}"
+
+- name: Demander le certificat + la clé
+  ansible.builtin.command:
+    cmd: >
+      step ca certificate {{ ldap_tls_cn }}
+      {{ ldap_tls_cert }}
+      {{ ldap_tls_key }}
+      --ca-url {{ step_ca_url }}
+      --root {{ ldap_tls_ca }}
+      --provisioner {{ step_ca_provisioner }}
+      --password-file /dev/stdin
+      --force
+    stdin: "{{ openbao_provisioner_password }}"
+  args:
+    creates: "{{ ldap_tls_cert }}"
+  no_log: true
+
+
+
+- name: Donner à slapd les droits sur le certificat, la clé et le certificat racine
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ slapd_user }}"
+    group: "{{ slapd_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ ldap_tls_cert }}", mode: "0644" }
+    - { path: "{{ ldap_tls_key }}", mode: "0640" }
+    - { path: "{{ ldap_tls_ca }}", mode: "0644" }
+
+- name: Configurer TLS dans cn=config
+  community.general.ldap_attrs:
+    dn: cn=config
+    attributes:
+      olcTLSCertificateFile: "{{ ldap_tls_cert }}"
+      olcTLSCertificateKeyFile: "{{ ldap_tls_key }}"
+      olcTLSCACertificateFile: "{{ ldap_tls_ca }}"
+    state: exact
+  notify: Redémarrer slapd
+
+- name: Activer le listener LDAPS
+  ansible.builtin.lineinfile:
+    path: /etc/default/slapd
+    regexp: '^SLAPD_SERVICES='
+    line: 'SLAPD_SERVICES="ldap:/// ldaps:/// ldapi:///"'
+  notify: Redémarrer slapd
+
+- name: Déployer le script de hook de renouvellement
+  ansible.builtin.template:
+    src: step-renew-hook.sh.j2
+    dest: /usr/local/bin/step-renew-ldap-hook.sh
+    owner: root
+    group: root
+    mode: "0750"
+  notify: Recharger et redémarrer le renouvellement
+
+- name: Déployer le service de renouvellement automatique du certificat
+  ansible.builtin.template:
+    src: step-renew-ldap.service.j2
+    dest: /etc/systemd/system/step-renew-ldap.service
+    mode: "0644"
+  notify: Recharger et redémarrer le renouvellement
+
+- name: Activer et démarrer le service de renouvellement
+  ansible.builtin.systemd:
+    name: step-renew-ldap
+    enabled: true
+    state: started
+    daemon_reload: true

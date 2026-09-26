@@ -1,0 +1,14 @@
+openbao_image: "openbao/openbao:2.6.2"
+openbao_domain: "vault.homelab.local"
+openbao_node_id: "vault-node1"
+openbao_gid: "1000"
+openbao_uid: "100"
+
+stack_dir: "/home/{{ ansible_user }}/openbao"             # nouvel emplacement, tout le reste s'y réfère
+
+openbao_data_dir: "{{ stack_dir }}/openbao-data"
+
+caddy_trusted_root_host: "{{ stack_dir }}/step_root_ca.crt"        # chemin réel sur l'hôte (le fichier existe déjà, pas à recréer)
+caddy_trusted_root_container: "/etc/caddy/step_root_ca.crt"        # chemin vu depuis le conteneur (utilisé dans le Caddyfile)
+
+caddy_acme_directory: "https://192.168.1.105:9000/acme/acme/directory"

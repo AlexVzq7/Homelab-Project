@@ -1,0 +1,13 @@
+#SPDX-License-Identifier: MIT-0
+---
+# handlers file for roles/openldap_tls
+- name: Redémarrer slapd
+  ansible.builtin.systemd:
+    name: slapd
+    state: restarted
+
+- name: Recharger et redémarrer le renouvellement
+  ansible.builtin.systemd:
+    name: step-renew-ldap
+    daemon_reload: true
+    state: restarted

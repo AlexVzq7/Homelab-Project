@@ -1,0 +1,20 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/openbao_ldap_auth
+
+openbao_api_url: "https://vault.homelab.local"
+openbao_kv_mount: secret
+
+ldap_auth_url: "ldaps://openldap.homelab.local"
+ldap_auth_binddn: "cn=svc-openbao,ou=services,dc=homelab,dc=local"
+ldap_auth_userdn: "ou=users,dc=homelab,dc=local"
+ldap_auth_userattr: "uid"
+ldap_auth_groupdn: "ou=groups,dc=homelab,dc=local"
+ldap_auth_groupattr: "cn"
+ldap_auth_starttls: false
+
+ldap_admin_group: "Administrateur"
+ldap_user_group: "Utilisateurs"
+
+ldap_ca_cert_path_on_ldap_host: /etc/ldap/tls/ca.crt
+homelab_ca_local_cache: /tmp/homelab-ca-openbao-role.crt

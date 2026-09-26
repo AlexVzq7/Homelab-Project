@@ -1,0 +1,14 @@
+storage "raft" {
+  path    = "/openbao/data"
+  node_id = "{{ openbao_node_id }}"
+}
+
+listener "tcp" {
+  address     = "0.0.0.0:8200"
+  tls_disable = true
+}
+
+api_addr     = "https://{{ openbao_domain }}"
+cluster_addr = "https://{{ openbao_domain }}:8201"
+
+ui            = true

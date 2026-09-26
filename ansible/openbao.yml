@@ -1,0 +1,5 @@
+- name: Déployer OpenBao sur vault (remplace Vaultwarden)
+  hosts: openbao_server
+  become: true
+  roles:
+    - openbao_install

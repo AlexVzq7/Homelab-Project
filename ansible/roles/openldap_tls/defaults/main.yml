@@ -1,0 +1,17 @@
+#SPDX-License-Identifier: MIT-0
+---
+# defaults file for roles/openldap_tls
+step_cli_version: "0.29.0"
+step_cli_deb_url: "https://github.com/smallstep/cli/releases/download/v{{ step_cli_version }}/step-cli_{{ step_cli_version }}-1_amd64.deb"
+
+step_ca_url: "https://ca.homelab.local:9000"
+step_ca_root_fingerprint: "334c2853db23dd68c4df72ae767f34e06bc30dec6379223d2b28cfbd0e69e494"
+
+ldap_tls_cn: "openldap.homelab.local"
+step_ca_provisioner: "openbao-automation"
+
+slapd_user: "openldap"
+slapd_group: "openldap"
+ldap_tls_cert: /etc/ldap/tls/ldap.crt
+ldap_tls_key: /etc/ldap/tls/ldap.key
+ldap_tls_ca: /etc/ldap/tls/ca.crt

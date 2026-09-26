@@ -1,0 +1,13 @@
+[Unit]
+Description=Renouvellement automatique du certificat TLS LDAP (step-ca)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/step ca renew --daemon --ca-url {{ step_ca_url }} --root {{ ldap_tls_ca }} --exec /usr/local/bin/step-renew-ldap-hook.sh {{ ldap_tls_cert }} {{ ldap_tls_key }}
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

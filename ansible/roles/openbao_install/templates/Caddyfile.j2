@@ -1,0 +1,10 @@
+{{ openbao_domain }} {
+    tls {
+        issuer acme {
+            dir {{ caddy_acme_directory }}
+            trusted_roots {{ caddy_trusted_root_container }}
+        }
+    }
+    reverse_proxy openbao:8200
+}
+
