@@ -1,0 +1,10 @@
+# Copiez ce fichier en terraform.tfvars et remplissez avec vos propres valeurs.
+
+pm_api_token_id     = "user@pve!tokenid"
+pm_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# Vos propres cles SSH publiques (jamais vos cles privees) :
+ssh_keys = [
+  "ssh-ed25519 AAAA... votre-cle-1",
+  "ssh-ed25519 AAAA... votre-cle-2",
+]

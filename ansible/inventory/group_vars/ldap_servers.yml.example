@@ -1,0 +1,11 @@
+# Copiez ce fichier en ldap_servers.yml, remplissez les valeurs en clair,
+# puis chiffrez chaque secret avec ansible-vault avant de committer.
+#
+#   printf '%s' 'votre_valeur' | ansible-vault encrypt_string \
+#     --vault-password-file .vault_pass --stdin-name 'ldap_admin_password'
+#
+# Collez le resultat ("ldap_admin_password: !vault |..." avec son bloc chiffre)
+# dans ldap_servers.yml. Ne committez jamais ce fichier avec des valeurs en clair.
+
+ldap_admin_password: "CHANGE_ME"
+openbao_provisioner_password: "CHANGE_ME"

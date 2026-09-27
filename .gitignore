@@ -22,6 +22,7 @@ tf_debug.log
 # ===== Ansible =====
 *vault_pass*
 .vault_pass
+!.vault_pass.example
 *.retry
 .ansible/
 ansible/outputs/

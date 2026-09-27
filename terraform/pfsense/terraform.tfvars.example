@@ -1,0 +1,4 @@
+# Copiez ce fichier en terraform.tfvars et remplissez avec vos propres valeurs.
+
+pm_api_token_id     = "user@pve!tokenid"
+pm_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"

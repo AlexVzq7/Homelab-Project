@@ -1,0 +1,5 @@
+# Copiez ce fichier en .vault_pass et remplacez la ligne ci-dessous par un
+# mot de passe long et aleatoire (une seule ligne, sans retour a la ligne final).
+# Ecrivez-le avec printf, pas echo, pour eviter un \n final :
+#   printf '%s' 'votre-mot-de-passe-long-et-aleatoire' > .vault_pass
+remplace-moi-par-un-mot-de-passe-long-et-aleatoire
