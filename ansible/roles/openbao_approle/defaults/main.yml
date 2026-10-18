@@ -1,0 +1,40 @@
+---
+# true = génère et livre un nouveau secret_id même si le fichier existe déjà
+openbao_approle_rotate: false
+
+openbao_approles:
+  - name: tofu
+    policy_name: tofu-state
+    policy_hcl: |
+      path "{{ openbao_kv_mount }}/data/infra/tofu/*" {
+        capabilities = ["read"]
+      }
+    token_ttl: 15m
+    token_max_ttl: 1h
+    secret_id_ttl: 720h
+    deliver_group: opentofu_server
+    deliver_user: debian
+    deliver_dir: /etc/openbao
+
+  # Snapshots raft quotidiens (rôle backup sur la VM vault)
+  - name: backup
+    policy_name: raft-snapshot
+    policy_hcl: |
+      path "sys/storage/raft/snapshot" {
+        capabilities = ["read"]
+      }
+    token_ttl: 5m
+    token_max_ttl: 15m
+    secret_id_ttl: 0
+    deliver_group: openbao_server
+    deliver_user: root
+    deliver_dir: /etc/openbao-backup
+
+# Générés dans OpenBao seulement s'ils n'existent pas (jamais écrasés)
+openbao_generated_secrets:
+  - path: infra/tofu/db
+    field: password
+    length: 48
+  - path: infra/tofu/state-encryption
+    field: passphrase
+    length: 64

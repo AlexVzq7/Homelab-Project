@@ -1,0 +1,32 @@
+---
+# Fournit openbao_token aux rôles qui parlent à l'API OpenBao.
+# - openbao_bootstrap_token défini (token root, uniquement pour le premier bootstrap) : utilisé tel quel
+# - sinon : connexion avec l'AppRole "ansible" (token court, policy limitée)
+
+- name: Utiliser le token de bootstrap
+  ansible.builtin.set_fact:
+    openbao_token: "{{ openbao_bootstrap_token }}"
+  when: openbao_bootstrap_token | default('') | length > 0
+  no_log: true
+
+- name: Se connecter à OpenBao avec l'AppRole ansible
+  community.hashi_vault.vault_login:
+    url: "{{ openbao_api_url }}"
+    ca_cert: "{{ homelab_ca_cert }}"
+    auth_method: approle
+    role_id: "{{ openbao_ansible_role_id }}"
+    secret_id: "{{ openbao_ansible_secret_id }}"
+  register: openbao_login_result
+  delegate_to: localhost
+  become: false
+  run_once: true
+  check_mode: false
+  changed_when: false
+  when: openbao_bootstrap_token | default('') | length == 0
+  no_log: true
+
+- name: Mémoriser le token OpenBao
+  ansible.builtin.set_fact:
+    openbao_token: "{{ openbao_login_result.login.auth.client_token }}"
+  when: openbao_bootstrap_token | default('') | length == 0
+  no_log: true

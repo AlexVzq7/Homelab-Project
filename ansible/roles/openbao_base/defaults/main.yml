@@ -1,0 +1,14 @@
+---
+# AppRole utilisée par Ansible à la place du token root
+openbao_ansible_policy: ansible
+openbao_ansible_approle:
+  token_ttl: 30m
+  token_max_ttl: 1h
+  # secret_id sans expiration : il est stocké chiffré dans le dépôt et se renouvelle
+  # en relançant ce playbook avec -e openbao_ansible_rotate=true
+  secret_id_ttl: 0
+
+openbao_ansible_rotate: false
+
+# Fichier (chiffré avec ansible-vault) où sont écrits role_id et secret_id
+openbao_ansible_creds_file: "{{ playbook_dir }}/inventory/group_vars/all/openbao.yml"

@@ -1,0 +1,101 @@
+---
+# Socle OpenBao : moteur KV, auth AppRole et AppRole "ansible".
+# (le journal d'audit est déclaré dans openbao.hcl : OpenBao refuse de le créer par l'API)
+# Premier lancement : avec le token root (voir openbao-bootstrap.yml).
+# Ensuite : rejouable avec l'AppRole ansible elle-même.
+
+- name: Lister les moteurs de secrets montés
+  community.hashi_vault.vault_read:
+    path: sys/mounts
+  register: base_kv
+
+- name: Activer le moteur KV v2
+  community.hashi_vault.vault_write:
+    path: "sys/mounts/{{ openbao_kv_mount }}"
+    data:
+      type: kv-v2
+  when: (openbao_kv_mount ~ '/') not in (base_kv.data.data | default(base_kv.data))
+
+- name: Lister les méthodes d'auth
+  community.hashi_vault.vault_read:
+    path: sys/auth
+  register: base_auth
+
+- name: Activer l'auth AppRole
+  community.hashi_vault.vault_write:
+    path: sys/auth/approle
+    data:
+      type: approle
+  when: "'approle/' not in base_auth.data.data | default(base_auth.data)"
+
+- name: Lire la policy ansible
+  community.hashi_vault.vault_read:
+    path: "sys/policies/acl/{{ openbao_ansible_policy }}"
+  register: base_policy
+  failed_when: false
+
+- name: Charger la policy ansible (si modifiée)
+  community.hashi_vault.vault_write:
+    path: "sys/policies/acl/{{ openbao_ansible_policy }}"
+    data:
+      policy: "{{ lookup('template', 'ansible-policy.hcl.j2') }}"
+  when: ((base_policy.data | default({}, true)).get('data', {}).get('policy', '') | trim) != (lookup('template', 'ansible-policy.hcl.j2') | trim)
+
+- name: Lire l'AppRole ansible
+  community.hashi_vault.vault_read:
+    path: auth/approle/role/ansible
+  register: base_role
+  failed_when: false
+
+- name: Créer/mettre à jour l'AppRole ansible (si absente ou modifiée)
+  community.hashi_vault.vault_write:
+    path: auth/approle/role/ansible
+    data:
+      token_policies: "{{ openbao_ansible_policy }}"
+      token_ttl: "{{ openbao_ansible_approle.token_ttl }}"
+      token_max_ttl: "{{ openbao_ansible_approle.token_max_ttl }}"
+      secret_id_ttl: "{{ openbao_ansible_approle.secret_id_ttl }}"
+      bind_secret_id: true
+  when: >-
+    base_role.data is not defined
+    or (base_role.data.data.token_policies | default([])) != [openbao_ansible_policy]
+    or (base_role.data.data.token_ttl | default(-1)) != (openbao_ansible_approle.token_ttl | community.general.to_seconds | int)
+    or (base_role.data.data.token_max_ttl | default(-1)) != (openbao_ansible_approle.token_max_ttl | community.general.to_seconds | int)
+    or (base_role.data.data.secret_id_ttl | default(-1)) != (openbao_ansible_approle.secret_id_ttl | int)
+
+- name: Lire le role_id de l'AppRole ansible
+  community.hashi_vault.vault_read:
+    path: auth/approle/role/ansible/role-id
+  register: base_role_id
+  check_mode: false
+  # En check mode, l'AppRole n'existe pas encore au premier lancement
+  failed_when: base_role_id.data is not defined and not ansible_check_mode
+  no_log: true
+
+- name: Générer un secret_id (premier bootstrap ou rotation demandée)
+  community.hashi_vault.vault_write:
+    path: auth/approle/role/ansible/secret-id
+    data:
+      metadata: '{"source": "openbao-bootstrap"}'
+  register: base_secret_id
+  when: openbao_ansible_secret_id is not defined or openbao_ansible_rotate | bool
+  no_log: true
+
+- name: Écrire les identifiants dans l'inventaire
+  ansible.builtin.copy:
+    dest: "{{ openbao_ansible_creds_file }}"
+    mode: "0600"
+    content: |
+      ---
+      # Généré par openbao-bootstrap.yml — identifiants de l'AppRole "ansible"
+      openbao_ansible_role_id: "{{ base_role_id.data.data.role_id }}"
+      openbao_ansible_secret_id: "{{ base_secret_id.data.data.secret_id }}"
+  when: base_secret_id is changed and not ansible_check_mode
+  no_log: true
+
+- name: Chiffrer le fichier d'identifiants avec ansible-vault
+  ansible.builtin.command:
+    cmd: "ansible-vault encrypt {{ openbao_ansible_creds_file }}"
+    chdir: "{{ playbook_dir }}"
+  when: base_secret_id is changed and not ansible_check_mode
+  changed_when: true

@@ -1,0 +1,4 @@
+# Fichier généré et chiffré automatiquement par openbao-bootstrap.yml.
+# Identifiants de l'AppRole "ansible" utilisée par tous les playbooks OpenBao.
+openbao_ansible_role_id: "CHANGE_ME"
+openbao_ansible_secret_id: "CHANGE_ME"

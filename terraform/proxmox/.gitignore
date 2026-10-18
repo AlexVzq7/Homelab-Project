@@ -4,3 +4,4 @@
 *.tfvars
 tf_debug.log
 crash.log
+!homelab.auto.tfvars

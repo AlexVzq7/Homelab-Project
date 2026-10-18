@@ -1,0 +1,6 @@
+---
+- name: Install the QEMU guest agent on the Debian VMs
+  hosts: all:!pfsense:!ubuntu-gui
+  become: true
+  roles:
+    - qemu_guest_agent

@@ -1,28 +1,68 @@
 ---
-- name: "Découverte de l'ip publique"
-  ansible.builtin.uri:
-    url: https://api.ipify.org
-    return_content: yes
-  register: public_ip
-  delegate_to: localhost
-  
-- name: "Récupération du config.xml"
-  ansible.builtin.fetch:
-    src: /conf/config.xml
-    dest: /tmp/pfsense_config.xml
-    flat: yes
-  
-- name: "Extraction de la CA"
-  community.general.xml:
-    path: /tmp/pfsense_config.xml
-    xpath: "//ca[descr='PFSENSE_CA']/crt"
-    content: "text"
-  register: ca_node
-  delegate_to: localhost
+# config.xml contient TOUTES les clés privées (CA, serveur, clients) et le hash admin :
+# il est copié dans un dossier temporaire privé (0700) et supprimé quoi qu'il arrive.
+- name: "Exporter les configurations VPN"
+  when: not ansible_check_mode  # l'export ne modifie pas pfSense, mais écrit des clés sur le poste
+  block:
+    - name: "Découvrir l'IP publique (si vpn_public_endpoint est vide)"
+      ansible.builtin.uri:
+        url: https://api.ipify.org
+        return_content: true
+      register: public_ip
+      delegate_to: localhost
+      when: vpn_public_endpoint | length == 0
 
-- name: "Lancement de l'ouvrier pour chaque user"
-  include_tasks: generate_user.yml
-  loop: "{{ vpn_users }}"
-  vars:
-    ip_publique: "{{ public_ip.content }}"
-    port_vpn: "{{ vpn_port }}" 
+    - name: "Créer un dossier temporaire privé"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: pfsense
+      register: vpn_tmpdir
+      delegate_to: localhost
+
+    - name: "Récupérer config.xml"
+      ansible.builtin.fetch:
+        src: /conf/config.xml
+        dest: "{{ vpn_tmpdir.path }}/config.xml"
+        flat: true
+
+    - name: "Extraire le certificat de la CA"
+      community.general.xml:
+        path: "{{ vpn_tmpdir.path }}/config.xml"
+        xpath: "//ca[descr='PFSENSE_CA']/crt"
+        content: "text"
+      register: ca_node
+      delegate_to: localhost
+
+    - name: "Extraire la clé tls-crypt du serveur"
+      community.general.xml:
+        path: "{{ vpn_tmpdir.path }}/config.xml"
+        xpath: "//openvpn-server[description='OpenVPN_Server']/tls"
+        content: "text"
+      register: tls_node
+      delegate_to: localhost
+      when: vpn_tls_crypt | bool and vpn_tls_crypt_key | length == 0
+      no_log: true
+
+    - name: "Créer le dossier d'export des .ovpn"
+      ansible.builtin.file:
+        path: "{{ vpn_export_dir }}"
+        state: directory
+        mode: "0700"
+      delegate_to: localhost
+
+    - name: "Générer le .ovpn de chaque utilisateur"
+      ansible.builtin.include_tasks: generate_user.yml
+      loop: "{{ vpn_users }}"
+      loop_control:
+        label: "{{ item.name }}"
+      vars:
+        ip_publique: "{{ vpn_public_endpoint if vpn_public_endpoint | length > 0 else public_ip.content }}"
+        port_vpn: "{{ vpn_port }}"
+
+  always:
+    - name: "Supprimer la copie locale de config.xml"
+      ansible.builtin.file:
+        path: "{{ vpn_tmpdir.path }}"
+        state: absent
+      delegate_to: localhost
+      when: vpn_tmpdir.path is defined

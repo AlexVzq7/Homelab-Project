@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: Alex & Driss
+  description: Certificat TLS step-ca avec renouvellement automatique
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm]
+dependencies: []

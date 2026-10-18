@@ -1,0 +1,17 @@
+---
+# Sauvegarde locale quotidienne (timer systemd) avec rétention.
+# backup_kind : postgres | ldap | openbao | stepca
+backup_kind: ""
+backup_dir: "/var/backups/homelab/{{ backup_kind }}"
+backup_retention_days: 14
+backup_oncalendar: "*-*-* 02:30:00"
+
+# postgres
+backup_postgres_databases: ["tfstate"]
+
+# openbao (snapshot raft via l'AppRole "backup" livrée par openbao-approle.yml)
+backup_openbao_addr: "http://127.0.0.1:8200"
+backup_openbao_creds_dir: /etc/openbao-backup
+
+# step-ca (dossier monté dans le conteneur : config, base et clés chiffrées)
+backup_stepca_dir: "/home/debian/step-ca"

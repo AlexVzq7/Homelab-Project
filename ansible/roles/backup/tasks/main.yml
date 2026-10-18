@@ -1,0 +1,46 @@
+---
+- name: Vérifier le type de sauvegarde
+  ansible.builtin.assert:
+    that: backup_kind in ['postgres', 'ldap', 'openbao', 'stepca']
+    fail_msg: "backup_kind doit valoir postgres, ldap, openbao ou stepca"
+
+- name: Installer curl (snapshot OpenBao)
+  ansible.builtin.apt:
+    name: curl
+    state: present
+  when: backup_kind == 'openbao'
+
+- name: Créer le dossier de sauvegarde
+  ansible.builtin.file:
+    path: "{{ backup_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Déployer le script de sauvegarde
+  ansible.builtin.template:
+    src: "backup-{{ backup_kind }}.sh.j2"
+    dest: "/usr/local/sbin/homelab-backup-{{ backup_kind }}.sh"
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Déployer le service et le timer
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/homelab-backup-{{ backup_kind }}{{ item | splitext | last }}"
+    mode: "0644"
+  loop:
+    - backup.service
+    - backup.timer
+  notify: Recharger systemd
+
+- name: Activer le timer de sauvegarde
+  ansible.builtin.systemd:
+    name: "homelab-backup-{{ backup_kind }}.timer"
+    enabled: true
+    state: started
+    daemon_reload: true
+  # en check mode, une unité pas encore déployée est introuvable
+  ignore_errors: "{{ ansible_check_mode }}"

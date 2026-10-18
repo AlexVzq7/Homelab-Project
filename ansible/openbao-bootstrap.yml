@@ -1,0 +1,19 @@
+---
+# Socle OpenBao : journal d'audit, moteur KV, AppRole "ansible" pour tous les autres playbooks.
+#
+# Premier lancement (une seule fois, avec le token root) :
+#   ansible-playbook openbao-bootstrap.yml -e openbao_bootstrap_token=<token root>
+# Ensuite rejouable sans token root (l'AppRole ansible gère sa propre configuration).
+# Rotation du secret_id : ajouter -e openbao_ansible_rotate=true
+- name: Socle OpenBao
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/community.hashi_vault.vault:
+      url: "{{ openbao_api_url }}"
+      ca_cert: "{{ homelab_ca_cert }}"
+      auth_method: token
+      token: "{{ openbao_token | default(omit) }}"
+  roles:
+    - openbao_login
+    - openbao_base

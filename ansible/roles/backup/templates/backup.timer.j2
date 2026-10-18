@@ -1,0 +1,10 @@
+[Unit]
+Description=Sauvegarde homelab quotidienne ({{ backup_kind }})
+
+[Timer]
+OnCalendar={{ backup_oncalendar }}
+RandomizedDelaySec=15m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

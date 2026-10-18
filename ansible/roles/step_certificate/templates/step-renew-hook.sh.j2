@@ -1,0 +1,5 @@
+#!/bin/bash
+set -euo pipefail
+
+chown {{ step_cert_owner }}:{{ step_cert_group }} {{ step_cert_file }} {{ step_key_file }}
+{{ step_cert_reload_cmd }}

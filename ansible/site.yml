@@ -1,5 +1,11 @@
-# Playbook maître : importe tous les playbooks du homelab.
-# Pour cibler un seul morceau, utiliser directement : ansible-playbook dns.yml (ou openldap.yml, openbao.yml, pfsense-vpn.yml)
+---
+# Playbook maître : importe tous les playbooks du homelab, dans l'ordre de dépendance.
+# Pour cibler un seul morceau : ansible-playbook <playbook>.yml
+# openbao-bootstrap.yml n'est pas importé : il se lance une fois à la main avec le token root.
+# pfsense-vpn.yml n'est pas importé : pfSense n'accepte que la clé d'ansible-node.
+- name: Homelab - Agent invité QEMU
+  import_playbook: qemu-guest-agent.yml
+
 - name: Homelab - DNS (BIND9)
   import_playbook: dns.yml
 
@@ -9,5 +15,14 @@
 - name: Homelab - OpenBao
   import_playbook: openbao.yml
 
-- name: Homelab - pfSense / VPN
-  import_playbook: pfsense-vpn.yml
+- name: Homelab - Auth LDAP sur OpenBao
+  import_playbook: openbao-ldap.yml
+
+- name: Homelab - AppRoles et secrets applicatifs
+  import_playbook: openbao-approle.yml
+
+- name: Homelab - PostgreSQL (state OpenTofu)
+  import_playbook: postgresql.yml
+
+- name: Homelab - Sauvegardes
+  import_playbook: backup.yml

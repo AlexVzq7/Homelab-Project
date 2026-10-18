@@ -2,7 +2,14 @@
 - name: Configurer l'auth LDAP sur OpenBao
   hosts: localhost
   gather_facts: false
-  vars_files:
-    - inventory/group_vars/openbao_server.yml
+  vars:
+    openbao_ldap_bind_password: "{{ hostvars[groups['openbao_server'][0]].openbao_ldap_bind_password }}"
+  module_defaults:
+    group/community.hashi_vault.vault:
+      url: "{{ openbao_api_url }}"
+      ca_cert: "{{ homelab_ca_cert }}"
+      auth_method: token
+      token: "{{ openbao_token | default(omit) }}"
   roles:
+    - openbao_login
     - openbao_ldap_auth

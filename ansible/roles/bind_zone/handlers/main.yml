@@ -1,2 +1,5 @@
+---
 - name: Recharger la zone BIND
-  ansible.builtin.command: "rndc reload {{ zone_name }}"
+  ansible.builtin.command:
+    cmd: "rndc reload {{ zone_name }}"
+  changed_when: true

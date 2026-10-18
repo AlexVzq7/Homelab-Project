@@ -1,6 +1,40 @@
-- name: Déployer le fichier de zone homelab.local
+---
+# Le serial SOA ne change que si les enregistrements changent :
+# on rend la zone avec le serial actuel (check mode) et on ne l'incrémente que s'il y a une différence.
+- name: Lire le fichier de zone actuel
+  ansible.builtin.slurp:
+    src: "{{ zone_file }}"
+  register: zone_current
+  failed_when: false
+
+- name: Extraire le serial actuel
+  ansible.builtin.set_fact:
+    zone_current_serial: >-
+      {{ ((zone_current.content | default('') | b64decode)
+          | regex_search('(\d+)\s*;\s*Serial', '\1') | default(['0'], true)) | first | int }}
+
+- name: Comparer la zone souhaitée avec la zone actuelle
   ansible.builtin.template:
     src: db.homelab.local.j2
     dest: "{{ zone_file }}"
+    owner: root
+    group: bind
+    mode: "0644"
+  vars:
+    zone_serial: "{{ zone_current_serial }}"
+  check_mode: true
+  diff: false
+  register: zone_compare
+
+- name: Déployer le fichier de zone {{ zone_name }}
+  ansible.builtin.template:
+    src: db.homelab.local.j2
+    dest: "{{ zone_file }}"
+    owner: root
+    group: bind
+    mode: "0644"
     validate: "named-checkzone {{ zone_name }} %s"
+  vars:
+    # nouveau serial strictement supérieur à l'ancien
+    zone_serial: "{{ [ansible_date_time.epoch | int, zone_current_serial | int + 1] | max if zone_compare is changed else zone_current_serial }}"
   notify: Recharger la zone BIND

@@ -17,3 +17,8 @@ remote-cert-tls server
 <key>
 {{ vpn_client_key }}
 </key>
+{% if vpn_tls_crypt_pem | trim | length > 0 %}
+<tls-crypt>
+{{ vpn_tls_crypt_pem | trim }}
+</tls-crypt>
+{% endif %}

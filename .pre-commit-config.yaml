@@ -1,0 +1,22 @@
+---
+# Installation : pip install pre-commit && pre-commit install
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.24.2
+    hooks:
+      - id: gitleaks
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+  - repo: https://github.com/ansible/ansible-lint
+    rev: v25.4.0
+    hooks:
+      - id: ansible-lint
+        entry: bash -c 'cd ansible && ANSIBLE_DEPRECATION_WARNINGS=false ansible-lint'
+        pass_filenames: false
+  - repo: https://github.com/tofuutils/pre-commit-opentofu
+    rev: v2.2.0
+    hooks:
+      - id: tofu_fmt
+      - id: tofu_validate

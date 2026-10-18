@@ -1,0 +1,25 @@
+---
+- name: Vérifier si la méthode d'auth AppRole est activée
+  community.hashi_vault.vault_read:
+    path: sys/auth
+  register: approle_auth_check
+
+- name: Activer la méthode d'auth AppRole
+  community.hashi_vault.vault_write:
+    path: sys/auth/approle
+    data:
+      type: approle
+  when: "'approle/' not in approle_auth_check.data.data | default(approle_auth_check.data)"
+
+- name: Générer les secrets applicatifs manquants
+  ansible.builtin.include_tasks: seed_secret.yml
+  loop: "{{ openbao_generated_secrets }}"
+  loop_control:
+    loop_var: secret
+
+- name: Configurer chaque AppRole
+  ansible.builtin.include_tasks: approle.yml
+  loop: "{{ openbao_approles }}"
+  loop_control:
+    loop_var: approle
+    label: "{{ approle.name }}"

@@ -1,0 +1,7 @@
+#!/bin/bash
+# Géré par Ansible : archive de la step-ca (config, base, clés privées chiffrées par leur mot de passe)
+set -euo pipefail
+umask 077
+stamp=$(date +%Y%m%d-%H%M%S)
+tar -czf "{{ backup_dir }}/step-ca-${stamp}.tar.gz" -C "$(dirname {{ backup_stepca_dir }})" "$(basename {{ backup_stepca_dir }})"
+{% include '_prune.j2' %}

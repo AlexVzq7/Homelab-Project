@@ -1,0 +1,68 @@
+---
+- name: Installer PostgreSQL, le connecteur Python et acl
+  ansible.builtin.apt:
+    name: [postgresql, python3-psycopg2, acl]  # acl : nécessaire pour become_user postgres
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Certificat TLS PostgreSQL (step-ca)
+  ansible.builtin.include_role:
+    name: step_certificate
+  vars:
+    step_cert_name: postgres
+    step_cert_label: PostgreSQL
+    step_cert_cn: "{{ postgres_tls_cn }}"
+    step_cert_file: "{{ postgres_tls_cert }}"
+    step_key_file: "{{ postgres_tls_key }}"
+    step_ca_file: "{{ postgres_tls_ca }}"
+    step_cert_owner: postgres
+    step_cert_group: postgres
+    step_cert_dir_owner: postgres
+    step_key_mode: "0600"
+    step_cert_reload_cmd: systemctl reload postgresql
+
+- name: Déployer la configuration PostgreSQL (écoute réseau + TLS)
+  ansible.builtin.template:
+    src: homelab.conf.j2
+    dest: "/etc/postgresql/{{ postgres_version }}/main/conf.d/10-homelab.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: Redémarrer PostgreSQL
+
+- name: Déployer pg_hba.conf (TLS obligatoire pour l'accès réseau)
+  ansible.builtin.template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/{{ postgres_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: "0640"
+  notify: Recharger PostgreSQL
+
+- name: Appliquer les redémarrages en attente
+  ansible.builtin.meta: flush_handlers
+
+- name: Lire le mot de passe de la base dans OpenBao
+  community.hashi_vault.vault_read:
+    path: "{{ openbao_kv_mount }}/data/infra/tofu/db"
+  delegate_to: localhost
+  become: false
+  register: postgres_tfstate_secret
+  no_log: true
+
+- name: Créer le rôle pour le state OpenTofu
+  community.postgresql.postgresql_user:
+    name: "{{ postgres_tfstate_user }}"
+    password: "{{ postgres_tfstate_secret.data.data.data.password }}"
+    no_password_changes: true  # mot de passe posé à la création seulement
+  become: true
+  become_user: postgres
+  no_log: true
+
+- name: Créer la base du state OpenTofu
+  community.postgresql.postgresql_db:
+    name: "{{ postgres_tfstate_db }}"
+    owner: "{{ postgres_tfstate_user }}"
+  become: true
+  become_user: postgres

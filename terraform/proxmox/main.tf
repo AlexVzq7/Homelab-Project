@@ -41,12 +41,12 @@ resource "proxmox_virtual_environment_vm" "vm" {
     for_each = each.value.use_cloud_init ? [1] : []
     content {
       dns {
-        servers = ["8.8.8.8", "1.1.1.1"]
+        servers = var.dns_servers
       }
       ip_config {
         ipv4 {
           address = each.value.ip
-          gateway = each.value.gateway
+          gateway = coalesce(each.value.gateway, var.default_gateway)
         }
       }
       user_account {

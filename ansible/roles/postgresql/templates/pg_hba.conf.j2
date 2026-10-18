@@ -1,0 +1,6 @@
+# Géré par Ansible
+local   all   postgres   peer
+local   all   all        peer
+{% for net in postgres_allowed_networks %}
+hostssl {{ postgres_tfstate_db }}   {{ postgres_tfstate_user }}   {{ net }}   scram-sha-256
+{% endfor %}

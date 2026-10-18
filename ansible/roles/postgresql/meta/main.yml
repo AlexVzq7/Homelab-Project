@@ -1,0 +1,10 @@
+---
+galaxy_info:
+  author: Alex & Driss
+  description: PostgreSQL pour le state OpenTofu (TLS step-ca, mot de passe dans OpenBao)
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Debian
+      versions: [bookworm]
+dependencies: []

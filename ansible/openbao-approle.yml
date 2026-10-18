@@ -1,0 +1,13 @@
+---
+- name: Configurer les AppRoles OpenBao et les secrets applicatifs
+  hosts: localhost
+  gather_facts: false
+  module_defaults:
+    group/community.hashi_vault.vault:
+      url: "{{ openbao_api_url }}"
+      ca_cert: "{{ homelab_ca_cert }}"
+      auth_method: token
+      token: "{{ openbao_token | default(omit) }}"
+  roles:
+    - openbao_login
+    - openbao_approle

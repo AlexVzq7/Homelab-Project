@@ -1,0 +1,120 @@
+---
+- name: "Calculer l'empreinte de l'AppRole {{ approle.name }}"
+  ansible.builtin.set_fact:
+    approle_fingerprint: "{{ (approle | to_json(sort_keys=True)) | hash('sha256') }}"
+
+- name: Lire l'empreinte enregistrée
+  community.hashi_vault.vault_read:
+    path: "{{ openbao_kv_mount }}/data/ansible-state/approle-{{ approle.name }}"
+  register: approle_fp_check
+  failed_when: false
+
+# L'empreinte seule ne suffit pas : si l'AppRole ou la policy a été supprimée à la main,
+# on la recrée quand même.
+- name: "Vérifier l'existence de la policy {{ approle.policy_name }}"
+  community.hashi_vault.vault_read:
+    path: "sys/policies/acl/{{ approle.policy_name }}"
+  register: approle_policy_check
+  failed_when: false
+
+- name: "Vérifier l'existence de l'AppRole {{ approle.name }}"
+  community.hashi_vault.vault_read:
+    path: "auth/approle/role/{{ approle.name }}"
+  register: approle_role_check
+  failed_when: false
+
+- name: Déterminer si une écriture est nécessaire
+  ansible.builtin.set_fact:
+    approle_needs_write: >-
+      {{ (approle_fp_check.data | default({}, true)).get('data', {}).get('data', {}).get('fingerprint', '') != approle_fingerprint
+         or approle_policy_check.data is not defined
+         or approle_role_check.data is not defined }}
+
+- name: "Charger la policy {{ approle.policy_name }}"
+  community.hashi_vault.vault_write:
+    path: "sys/policies/acl/{{ approle.policy_name }}"
+    data:
+      policy: "{{ approle.policy_hcl }}"
+  when: approle_needs_write | bool
+
+- name: "Créer/mettre à jour l'AppRole {{ approle.name }}"
+  community.hashi_vault.vault_write:
+    path: "auth/approle/role/{{ approle.name }}"
+    data:
+      token_policies: "{{ approle.policy_name }}"
+      token_ttl: "{{ approle.token_ttl }}"
+      token_max_ttl: "{{ approle.token_max_ttl }}"
+      secret_id_ttl: "{{ approle.secret_id_ttl }}"
+      bind_secret_id: true
+  when: approle_needs_write | bool
+
+- name: Enregistrer la nouvelle empreinte
+  community.hashi_vault.vault_write:
+    path: "{{ openbao_kv_mount }}/data/ansible-state/approle-{{ approle.name }}"
+    data:
+      data:
+        fingerprint: "{{ approle_fingerprint }}"
+  when: approle_needs_write | bool
+
+- name: Lire le role_id
+  community.hashi_vault.vault_read:
+    path: "auth/approle/role/{{ approle.name }}/role-id"
+  register: approle_role_id
+  check_mode: false
+  # En check mode sur une AppRole pas encore créée, la lecture échoue : sans conséquence
+  failed_when: approle_role_id.data is not defined and not ansible_check_mode
+  no_log: true
+
+- name: Créer le répertoire de livraison sur la machine cible
+  ansible.builtin.file:
+    path: "{{ approle.deliver_dir }}"
+    state: directory
+    owner: "{{ approle.deliver_user }}"
+    mode: "0750"
+  delegate_to: "{{ groups[approle.deliver_group][0] }}"
+  become: true
+
+- name: Livrer le certificat CA
+  ansible.builtin.copy:
+    src: "{{ homelab_ca_cert }}"
+    dest: "{{ approle.deliver_dir }}/ca.crt"
+    mode: "0644"
+  delegate_to: "{{ groups[approle.deliver_group][0] }}"
+  become: true
+
+- name: Livrer le role_id
+  ansible.builtin.copy:
+    content: "{{ approle_role_id.data.data.role_id }}"
+    dest: "{{ approle.deliver_dir }}/{{ approle.name }}.role_id"
+    owner: "{{ approle.deliver_user }}"
+    mode: "0600"
+  delegate_to: "{{ groups[approle.deliver_group][0] }}"
+  become: true
+  when: approle_role_id.data is defined
+  no_log: true
+
+- name: Vérifier la présence du secret_id sur la machine cible
+  ansible.builtin.stat:
+    path: "{{ approle.deliver_dir }}/{{ approle.name }}.secret_id"
+  delegate_to: "{{ groups[approle.deliver_group][0] }}"
+  become: true
+  register: approle_secret_id_file
+
+- name: Générer un secret_id (absent ou rotation demandée)
+  community.hashi_vault.vault_write:
+    path: "auth/approle/role/{{ approle.name }}/secret-id"
+    data: {}
+  when: not approle_secret_id_file.stat.exists or openbao_approle_rotate | bool
+  register: approle_new_secret_id
+  no_log: true
+
+- name: Livrer le secret_id
+  ansible.builtin.copy:
+    content: "{{ approle_new_secret_id.data.data.secret_id }}"
+    dest: "{{ approle.deliver_dir }}/{{ approle.name }}.secret_id"
+    owner: "{{ approle.deliver_user }}"
+    mode: "0600"
+  when: approle_new_secret_id is changed and not ansible_check_mode
+  delegate_to: "{{ groups[approle.deliver_group][0] }}"
+  become: true
+  no_log: true

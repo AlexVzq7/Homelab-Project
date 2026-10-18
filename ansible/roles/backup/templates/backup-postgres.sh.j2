@@ -1,0 +1,14 @@
+#!/bin/bash
+# Géré par Ansible : dump des bases PostgreSQL (format custom, restaurable avec pg_restore)
+set -euo pipefail
+umask 077
+stamp=$(date +%Y%m%d-%H%M%S)
+existing=$(runuser -u postgres -- psql -Atc "SELECT datname FROM pg_database")
+{% for db in backup_postgres_databases %}
+if grep -qx "{{ db }}" <<< "${existing}"; then
+  runuser -u postgres -- pg_dump -Fc {{ db }} > "{{ backup_dir }}/{{ db }}-${stamp}.dump"
+else
+  echo "Base {{ db }} absente, ignorée" >&2
+fi
+{% endfor %}
+{% include '_prune.j2' %}

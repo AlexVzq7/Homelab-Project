@@ -1,0 +1,8 @@
+[Unit]
+Description=Sauvegarde homelab ({{ backup_kind }})
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/homelab-backup-{{ backup_kind }}.sh

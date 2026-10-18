@@ -1,0 +1,8 @@
+#!/bin/bash
+# Géré par Ansible : export LDIF de la configuration (cn=config) et des données
+set -euo pipefail
+umask 077
+stamp=$(date +%Y%m%d-%H%M%S)
+slapcat -n 0 | gzip > "{{ backup_dir }}/config-${stamp}.ldif.gz"
+slapcat -n 1 | gzip > "{{ backup_dir }}/data-${stamp}.ldif.gz"
+{% include '_prune.j2' %}

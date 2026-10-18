@@ -1,0 +1,3 @@
+# Copiez ce fichier en step_ca.yml et chiffrez le secret :
+#   printf '%s' 'votre_valeur' | ansible-vault encrypt_string --stdin-name 'step_ca_provisioner_password'
+step_ca_provisioner_password: "CHANGE_ME"

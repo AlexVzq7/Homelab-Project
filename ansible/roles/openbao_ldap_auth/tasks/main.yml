@@ -1,56 +1,32 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# tasks file for roles/openbao_ldap_auth
 
-- name: Récupérer le certificat CA depuis le serveur LDAP
-  ansible.builtin.slurp:
-    src: "{{ ldap_ca_cert_path_on_ldap_host }}"
-  delegate_to: "{{ groups['ldap_servers'][0] }}"
-  register: ldap_ca_cert_b64
+- name: Charger le certificat racine de la step-ca
+  ansible.builtin.set_fact:
+    ldap_ca_cert_pem: "{{ lookup('ansible.builtin.file', homelab_ca_cert) }}"
 
-- name: Mettre en cache le certificat CA localement pour les appels API
-  ansible.builtin.copy:
-    content: "{{ ldap_ca_cert_b64.content | b64decode }}"
-    dest: "{{ homelab_ca_local_cache }}"
-    mode: "0644"
-
-- name: Vérifier si le moteur KV v2 est déjà monté
+- name: Lister les moteurs de secrets montés
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
-    path: "sys/mounts/{{ openbao_kv_mount }}/tune"
+    path: sys/mounts
   register: kv_mount_check
-  failed_when: false
 
 - name: Activer le moteur KV v2
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "sys/mounts/{{ openbao_kv_mount }}"
     data:
       type: kv-v2
-  when: kv_mount_check is failed
+  when: (openbao_kv_mount ~ '/') not in (kv_mount_check.data.data | default(kv_mount_check.data))
 
-- name: Vérifier si la méthode d'auth LDAP est déjà activée
+- name: Lister les méthodes d'auth activées
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
-    path: "sys/auth/ldap/tune"
+    path: sys/auth
   register: ldap_auth_check
-  failed_when: false
 
 - name: Activer la méthode d'auth LDAP
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: sys/auth/ldap
     data:
       type: ldap
-  when: ldap_auth_check is failed
+  when: "'ldap/' not in (ldap_auth_check.data.data | default(ldap_auth_check.data))"
 
 - name: Calculer l'empreinte de la configuration LDAP souhaitée
   ansible.builtin.set_fact:
@@ -64,28 +40,22 @@
         ldap_auth_groupdn ~ '|' ~
         ldap_auth_groupattr ~ '|' ~
         (ldap_auth_starttls | string) ~ '|' ~
-        (ldap_ca_cert_b64.content | b64decode)
+        ldap_ca_cert_pem
       ) | hash('sha256') }}
   no_log: true  # défense en profondeur : le résultat est un simple hash, mais on protège la valeur intermédiaire
 
 - name: Lire l'empreinte de configuration actuellement enregistrée
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "{{ openbao_kv_mount }}/data/ansible-state/ldap-auth-config"
   register: ldap_config_fingerprint_check
   failed_when: false
 
 - name: Configurer le backend d'auth LDAP (si modifié)
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: auth/ldap/config
     data:
       url: "{{ ldap_auth_url }}"
-      certificate: "{{ ldap_ca_cert_b64.content | b64decode }}"
+      certificate: "{{ ldap_ca_cert_pem }}"
       binddn: "{{ ldap_auth_binddn }}"
       bindpass: "{{ openbao_ldap_bind_password }}"
       userdn: "{{ ldap_auth_userdn }}"
@@ -101,9 +71,6 @@
 
 - name: Enregistrer la nouvelle empreinte de configuration
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "{{ openbao_kv_mount }}/data/ansible-state/ldap-auth-config"
     data:
       data:
@@ -112,9 +79,6 @@
 
 - name: Lister les méthodes d'auth pour découvrir l'accessor LDAP
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: sys/auth
   register: auth_list
 
@@ -124,18 +88,12 @@
 
 - name: Lire la policy admin actuelle
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: sys/policies/acl/admin
   register: admin_policy_check
   failed_when: false
 
 - name: Charger la policy admin (si modifiée)
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: sys/policies/acl/admin
     data:
       policy: "{{ lookup('template', 'admin-policy.hcl.j2') }}"
@@ -143,28 +101,21 @@
 
 - name: Lire la policy utilisateur actuelle
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: sys/policies/acl/utilisateur
   register: utilisateur_policy_check
   failed_when: false
 
 - name: Charger la policy utilisateur (si modifiée)
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: sys/policies/acl/utilisateur
     data:
       policy: "{{ lookup('template', 'utilisateur-policy.hcl.j2') }}"
-  when: ((utilisateur_policy_check.data | default({}, true)).get('data', {}).get('policy', '') | trim) != (lookup('template', 'utilisateur-policy.hcl.j2') | trim)
+  when: >-
+    ((utilisateur_policy_check.data | default({}, true)).get('data', {}).get('policy', '') | trim)
+    != (lookup('template', 'utilisateur-policy.hcl.j2') | trim)
 
 - name: Lire le mapping actuel du groupe Administrateur
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "auth/ldap/groups/{{ ldap_admin_group }}"
   register: admin_group_check
   failed_when: false
@@ -172,9 +123,6 @@
 
 - name: Mapper le groupe Administrateur à la policy admin (si modifié)
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "auth/ldap/groups/{{ ldap_admin_group }}"
     data:
       policies: admin
@@ -182,18 +130,12 @@
 
 - name: Lire le mapping actuel du groupe Utilisateurs
   community.hashi_vault.vault_read:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "auth/ldap/groups/{{ ldap_user_group }}"
   register: utilisateur_group_check
   failed_when: false
 
 - name: Mapper le groupe Utilisateurs à la policy utilisateur (si modifié)
   community.hashi_vault.vault_write:
-    url: "{{ openbao_api_url }}"
-    token: "{{ openbao_root_token }}"
-    ca_cert: "{{ homelab_ca_local_cache }}"
     path: "auth/ldap/groups/{{ ldap_user_group }}"
     data:
       policies: utilisateur

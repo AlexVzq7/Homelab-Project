@@ -1,6 +1,6 @@
 ---
-- name: "Install packages"
-  package:
+- name: "Installer les paquets pfSense"
+  ansible.builtin.package:
     name:
       - pfSense-pkg-sudo
     state: present
@@ -16,9 +16,9 @@
     keylen: "4096"
     keytype: RSA
     method: internal
-    state: present 
+    state: present
 
-- name: "Création du Certificat Serveur"
+- name: "Création du certificat serveur"
   pfsensible.core.pfsense_cert:
     name: "OPEN_VPN_SERVER_CERT"
     ca: "PFSENSE_CA"
@@ -28,7 +28,7 @@
     method: internal
     state: present
 
-- name: "Création des Certificats Clients"
+- name: "Création des certificats clients"
   pfsensible.core.pfsense_cert:
     name: "{{ item.cert_name }}"
     ca: "PFSENSE_CA"
@@ -38,18 +38,25 @@
     method: internal
     state: present
   loop: "{{ vpn_users }}"
+  loop_control:
+    label: "{{ item.name }}"
 
 - name: "Configuration de l'instance OpenVPN"
-  pfsensible.core.pfsense_openvpn_server: 
+  pfsensible.core.pfsense_openvpn_server:
     name: 'OpenVPN_Server'
     ca: "PFSENSE_CA"
     cert: "OPEN_VPN_SERVER_CERT"
+    crl: "{{ vpn_crl if vpn_crl | length > 0 else omit }}"
+    tls: "{{ (vpn_tls_crypt_key if vpn_tls_crypt_key | length > 0 else 'generate') if vpn_tls_crypt | bool else omit }}"
+    tls_type: "{{ 'crypt' if vpn_tls_crypt | bool else omit }}"
     tunnel_network: "{{ vpn_tunnel_network }}"
     local_network: "{{ vpn_local_networks }}"
     mode: server_tls
     interface: wan
     protocol: UDP4
     local_port: "{{ vpn_port }}"
-    client2client: true 
-    dns_server1: 8.8.8.8
-    dns_server2: 1.1.1.1
+    client2client: "{{ vpn_client2client }}"
+    dns_domain: "{{ vpn_dns_domain }}"
+    dns_server1: "{{ vpn_dns_servers[0] | default(omit) }}"
+    dns_server2: "{{ vpn_dns_servers[1] | default(omit) }}"
+  no_log: true  # le module renvoie la clé tls-crypt quand il la génère

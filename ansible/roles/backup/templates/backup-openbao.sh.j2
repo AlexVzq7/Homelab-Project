@@ -1,0 +1,15 @@
+#!/bin/bash
+# Géré par Ansible : snapshot raft OpenBao (restauration : bao operator raft snapshot restore)
+set -euo pipefail
+umask 077
+stamp=$(date +%Y%m%d-%H%M%S)
+addr="{{ backup_openbao_addr }}"
+role_id=$(cat "{{ backup_openbao_creds_dir }}/backup.role_id")
+secret_id=$(cat "{{ backup_openbao_creds_dir }}/backup.secret_id")
+token=$(curl -sf -X POST "${addr}/v1/auth/approle/login" \
+  -d "{\"role_id\":\"${role_id}\",\"secret_id\":\"${secret_id}\"}" \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["auth"]["client_token"])')
+curl -sf -H "X-Vault-Token: ${token}" "${addr}/v1/sys/storage/raft/snapshot" \
+  -o "{{ backup_dir }}/raft-${stamp}.snap"
+curl -sf -X POST -H "X-Vault-Token: ${token}" "${addr}/v1/auth/token/revoke-self" >/dev/null || true
+{% include '_prune.j2' %}

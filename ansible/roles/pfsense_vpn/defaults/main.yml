@@ -1,2 +1,49 @@
 ---
-# defaults file for roles/pfsense_vpn
+# Configuration de pfSense et du serveur OpenVPN.
+# Valeurs par défaut surchargeables depuis l'inventaire (group_vars/pfsense.yml).
+
+# --- Interfaces & passerelle ---
+wan_interface: "vtnet0"
+wan_ip: "10.168.168.230"
+wan_prefix: 24
+gateway_name: "GW_NETGEAR"
+gateway_ip: "10.168.168.1"
+
+# --- Serveur VPN ---
+vpn_port: 20301  # port réellement en écoute sur pfSense (relevé le 2026-10-04) ; l'ancien 33298 du dépôt ne correspondait pas
+vpn_tunnel_network: "10.50.20.0/24"
+vpn_local_networks: "192.168.1.0/24, 10.168.168.0/24"
+
+# Adresse publique (IP ou nom) écrite dans les .ovpn.
+# Vide = découverte via ipify depuis le poste qui lance Ansible
+# (attention : depuis un autre réseau, les .ovpn pointeraient vers la mauvaise IP).
+vpn_public_endpoint: "82.228.201.70"
+
+# Les clients VPN ne peuvent pas se joindre entre eux sauf besoin explicite
+vpn_client2client: false
+
+# DNS poussé aux clients : le BIND du homelab (il accepte déjà 10.50.20.0/24)
+vpn_dns_servers:
+  - "192.168.1.106"
+vpn_dns_domain: "homelab.local"
+
+# tls-crypt : chiffre et authentifie le canal de contrôle (protège contre le scan et le DoS)
+# Activer ou désactiver cette option oblige à redistribuer tous les .ovpn, et déconnecte tous les clients
+# (y compris un poste qui administre le homelab à travers le VPN) : à faire depuis ansible-node, pas depuis le VPN.
+vpn_tls_crypt: false
+# Clé tls-crypt (texte « OpenVPN Static key V1 »). Vide = pfSense la génère et le rôle la relit.
+# Fournir la clé à l'avance permet de préparer les .ovpn AVANT la bascule (voir README). Ne jamais la committer :
+#   ansible-playbook pfsense-vpn.yml -e vpn_tls_crypt=true -e @/chemin/tls_crypt.yml
+vpn_tls_crypt_key: ""
+
+# Nom d'une CRL déjà créée dans pfSense (System > Cert. Manager > Certificate Revocation).
+# Vide = pas de CRL : un client ne peut pas être révoqué sans supprimer son certificat.
+vpn_crl: ""
+
+# Dossier local où sont écrits les .ovpn (ignoré par git)
+vpn_export_dir: "{{ playbook_dir }}/outputs"
+
+# --- Utilisateurs VPN ---
+vpn_users:
+  - { name: 'Alex', cert_name: 'OPEN_VPN_CLIENT_ALEX_CERT' }
+  - { name: 'Driss', cert_name: 'OPEN_VPN_CLIENT_DRISS_CERT' }

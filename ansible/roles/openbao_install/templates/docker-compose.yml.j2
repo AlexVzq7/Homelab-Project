@@ -15,7 +15,7 @@ services:
       - openbao-net
 
   caddy:
-    image: caddy:latest
+    image: "{{ caddy_image }}"
     container_name: caddy
     restart: unless-stopped
     ports:
@@ -23,7 +23,7 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./step_root_ca.crt:/etc/caddy/step_root_ca.crt
+      - ./step_root_ca.crt:{{ caddy_trusted_root_container }}:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:

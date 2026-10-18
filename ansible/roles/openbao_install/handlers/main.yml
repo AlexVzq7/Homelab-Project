@@ -1,8 +1,12 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# handlers file for openbao
-- name: Redémarrer la stack OpenBao
+# SIGHUP : OpenBao relit sa configuration sans redémarrer, donc sans se resceller
+- name: Recharger OpenBao
+  ansible.builtin.command:
+    cmd: docker kill --signal HUP openbao
+  changed_when: true
+
+- name: Redémarrer Caddy
   community.docker.docker_compose_v2:
     project_src: "{{ stack_dir }}"
-    state: present
-    recreate: always
+    services: [caddy]
+    state: restarted

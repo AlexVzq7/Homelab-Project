@@ -12,3 +12,11 @@ api_addr     = "https://{{ openbao_domain }}"
 cluster_addr = "https://{{ openbao_domain }}:8201"
 
 ui            = true
+
+# Journal d'audit sur la sortie standard du conteneur (docker logs openbao)
+audit "file" "stdout" {
+  description = "Journal d'audit (docker logs openbao)"
+  options {
+    file_path = "stdout"
+  }
+}

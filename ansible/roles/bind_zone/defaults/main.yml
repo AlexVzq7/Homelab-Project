@@ -8,3 +8,5 @@ zone_records:
   - { name: "ca", ip: "192.168.1.105" }
   - { name: "vault", ip: "192.168.1.104" }
   - { name: "openldap", ip: "192.168.1.103" }
+  - { name: "opentofu", ip: "192.168.1.107" }
+  - { name: "postgres", ip: "192.168.1.108" }

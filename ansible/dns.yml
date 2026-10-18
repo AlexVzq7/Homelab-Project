@@ -5,7 +5,7 @@
     - dns_client
 
 - name: Déployer la zone Bind9
-  hosts: dns_server 
-  become: true 
-  roles: 
+  hosts: dns_server
+  become: true
+  roles:
     - bind_zone

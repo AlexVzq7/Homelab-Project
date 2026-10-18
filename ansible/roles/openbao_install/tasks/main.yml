@@ -1,18 +1,12 @@
-#SPDX-License-Identifier: MIT-0
 ---
-# tasks file for openbao
+- name: Déposer le certificat racine de la step-ca pour Caddy
+  ansible.builtin.copy:
+    src: "{{ homelab_ca_cert }}"
+    dest: "{{ caddy_trusted_root_host }}"
+    mode: "0644"
+  notify: Redémarrer Caddy
 
-- name: Vérifier que le root CA step-ca est bien présent
-  ansible.builtin.stat:
-    path: "{{ caddy_trusted_root_host }}"
-  register: step_root_ca
-
-- name: Echouer si le root CA step-ca est absent
-  ansible.builtin.fail:
-    msg: "{{ caddy_trusted_root_host }} est introuvable après renommage"
-  when: not step_root_ca.stat.exists
-
-- name: Créer le dossier de données OpenBao  (stockage de raft)
+- name: Créer le dossier de données OpenBao (stockage raft)
   ansible.builtin.file:
     path: "{{ openbao_data_dir }}"
     state: directory
@@ -27,22 +21,22 @@
     owner: "{{ openbao_uid }}"
     group: "{{ openbao_gid }}"
     mode: "0640"
-  notify: Redémarrer la stack OpenBao
+  notify: Recharger OpenBao
 
-- name: Déployer le Caddyfile (reverse proxy vers openbao au lieu de vaultwarden)
+- name: Déployer le Caddyfile
   ansible.builtin.template:
     src: Caddyfile.j2
     dest: "{{ stack_dir }}/Caddyfile"
     mode: "0640"
-  notify: Redémarrer la stack OpenBao
+  notify: Redémarrer Caddy
 
+# docker compose ne recrée que les services dont la définition a changé
 - name: Déployer docker-compose.yml
   ansible.builtin.template:
     src: docker-compose.yml.j2
     dest: "{{ stack_dir }}/docker-compose.yml"
     mode: "0640"
-  notify: Redémarrer la stack OpenBao
-  
+
 - name: Démarrer la stack OpenBao + Caddy
   community.docker.docker_compose_v2:
     project_src: "{{ stack_dir }}"

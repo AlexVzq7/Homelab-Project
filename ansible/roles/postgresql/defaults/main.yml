@@ -1,0 +1,14 @@
+---
+postgres_version: 15
+postgres_tls_cn: "postgres.{{ homelab_domain }}"
+postgres_tfstate_db: "tfstate"
+postgres_tfstate_user: "tofu"
+
+# Seul le runner OpenTofu se connecte à la base du state
+postgres_allowed_networks:
+  - "192.168.1.107/32"
+
+postgres_tls_dir: /etc/postgresql/tls
+postgres_tls_cert: /etc/postgresql/tls/pg.crt
+postgres_tls_key: /etc/postgresql/tls/pg.key
+postgres_tls_ca: /etc/postgresql/tls/ca.crt

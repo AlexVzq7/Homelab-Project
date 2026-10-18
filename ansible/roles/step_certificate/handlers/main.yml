@@ -1,0 +1,7 @@
+---
+- name: Redémarrer le renouvellement du certificat
+  ansible.builtin.systemd:
+    name: "step-renew-{{ step_cert_name }}"
+    daemon_reload: true
+    state: restarted
+  ignore_errors: "{{ ansible_check_mode }}"

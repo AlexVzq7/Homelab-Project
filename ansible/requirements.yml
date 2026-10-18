@@ -1,4 +1,13 @@
+---
+# Versions épinglées (celles testées sur le poste d'Alex le 2026-10-04)
 collections:
   - name: community.docker
+    version: "5.3.0"
   - name: community.general
+    version: "13.4.0"
   - name: community.hashi_vault
+    version: "7.1.0"
+  - name: community.postgresql
+    version: "5.0.0"
+  - name: pfsensible.core
+    version: "0.7.1"

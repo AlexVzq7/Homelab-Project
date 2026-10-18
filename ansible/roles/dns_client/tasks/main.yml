@@ -5,7 +5,7 @@
 
 - name: Déposer le fichier netplan dédié au DNS
   ansible.builtin.copy:
-    dest: /etc/netplan/99-dns.yaml
+    dest: /etc/netplan/40-dns.yaml
     mode: "0600"
     content: |
       network:
@@ -16,7 +16,7 @@
               addresses: [{{ dns_server }}]
               search: [{{ dns_search_domain }}]
   notify: Appliquer netplan
-  
+
 
 - name: Vérifier la résolution via dns-1
   ansible.builtin.command: "dig +short vault.homelab.local"
@@ -26,3 +26,9 @@
 - name: Afficher le résultat de la vérification
   ansible.builtin.debug:
     var: dig_result.stdout_lines
+
+- name: Supprimer l'ancien fichier netplan 99-dns.yaml
+  ansible.builtin.file:
+    path: /etc/netplan/99-dns.yaml
+    state: absent
+  notify: Appliquer netplan

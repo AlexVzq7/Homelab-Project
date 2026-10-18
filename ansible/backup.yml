@@ -1,0 +1,26 @@
+---
+# Sauvegardes locales quotidiennes (rétention 14 jours) dans /var/backups/homelab.
+# À compléter par une copie hors de la machine (Proxmox Backup Server ou autre).
+- name: Sauvegarde PostgreSQL (state OpenTofu)
+  hosts: postgres_server
+  become: true
+  roles:
+    - { role: backup, backup_kind: postgres }
+
+- name: Sauvegarde OpenLDAP
+  hosts: ldap_servers
+  become: true
+  roles:
+    - { role: backup, backup_kind: ldap }
+
+- name: Sauvegarde OpenBao (snapshot raft)
+  hosts: openbao_server
+  become: true
+  roles:
+    - { role: backup, backup_kind: openbao }
+
+- name: Sauvegarde step-ca
+  hosts: ca_server
+  become: true
+  roles:
+    - { role: backup, backup_kind: stepca }

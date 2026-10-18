@@ -1,0 +1,13 @@
+---
+- name: Playbook PostgreSQL (state OpenTofu)
+  hosts: postgres_server
+  become: true
+  module_defaults:
+    group/community.hashi_vault.vault:
+      url: "{{ openbao_api_url }}"
+      ca_cert: "{{ homelab_ca_cert }}"
+      auth_method: token
+      token: "{{ openbao_token | default(omit) }}"
+  roles:
+    - openbao_login
+    - postgresql

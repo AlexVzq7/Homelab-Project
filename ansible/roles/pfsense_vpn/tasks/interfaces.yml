@@ -5,7 +5,7 @@
       global $config;
       $gw = isset($config['interfaces']['wan']['gateway']) ? $config['interfaces']['wan']['gateway'] : '';
       $ip = isset($config['interfaces']['wan']['ipaddr']) ? $config['interfaces']['wan']['ipaddr'] : '';
-      
+
       if ($gw == '{{ gateway_name }}' && $ip == '{{ wan_ip }}') {
           echo "ETAT=DEJA_BON";
       } else {

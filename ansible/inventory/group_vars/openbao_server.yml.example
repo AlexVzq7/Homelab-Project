@@ -2,10 +2,11 @@
 # puis chiffrez chaque secret avec ansible-vault avant de committer.
 #
 #   printf '%s' 'votre_valeur' | ansible-vault encrypt_string \
-#     --vault-password-file .vault_pass --stdin-name 'openbao_ldap_bind_password'
+#     --vault-password-file ~/.config/homelab/vault_pass --stdin-name 'openbao_ldap_bind_password'
 #
 # Collez le resultat ("openbao_ldap_bind_password: !vault |..." avec son bloc chiffre)
 # dans openbao_server.yml. Ne committez jamais ce fichier avec des valeurs en clair.
 
 openbao_ldap_bind_password: "CHANGE_ME"
-openbao_root_token: "CHANGE_ME"
+# Token root : uniquement pour le premier openbao-bootstrap.yml, puis révoqué et retiré d'ici.
+# openbao_root_token: "CHANGE_ME"

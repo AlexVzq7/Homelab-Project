@@ -1,0 +1,51 @@
+# Policy de l'AppRole "ansible" : seulement les chemins que les rôles Ansible écrivent ou lisent.
+# Note : le droit d'écrire des policies permet en théorie de s'en donner plus ;
+# le gain par rapport au token root est un token court, traçable dans l'audit et révocable.
+
+# Méthodes d'auth (approle, ldap)
+path "sys/auth" {
+  capabilities = ["read"]
+}
+path "sys/auth/approle" {
+  capabilities = ["create", "update", "sudo"]
+}
+path "sys/auth/ldap" {
+  capabilities = ["create", "update", "sudo"]
+}
+
+# Moteur KV
+path "sys/mounts" {
+  capabilities = ["read"]
+}
+path "sys/mounts/{{ openbao_kv_mount }}" {
+  capabilities = ["create", "update"]
+}
+
+# Policies
+path "sys/policies/acl/*" {
+  capabilities = ["create", "read", "update", "list"]
+}
+
+# Configuration LDAP
+path "auth/ldap/config" {
+  capabilities = ["create", "read", "update"]
+}
+path "auth/ldap/groups/*" {
+  capabilities = ["create", "read", "update", "list"]
+}
+
+# AppRoles
+path "auth/approle/role/*" {
+  capabilities = ["create", "read", "update", "list"]
+}
+
+# Secrets d'infrastructure et état interne d'Ansible
+path "{{ openbao_kv_mount }}/data/infra/*" {
+  capabilities = ["create", "read", "update"]
+}
+path "{{ openbao_kv_mount }}/metadata/infra/*" {
+  capabilities = ["read"]
+}
+path "{{ openbao_kv_mount }}/data/ansible-state/*" {
+  capabilities = ["create", "read", "update"]
+}

@@ -1,5 +1,6 @@
-# Copiez ce fichier en .vault_pass et remplacez la ligne ci-dessous par un
-# mot de passe long et aleatoire (une seule ligne, sans retour a la ligne final).
-# Ecrivez-le avec printf, pas echo, pour eviter un \n final :
-#   printf '%s' 'votre-mot-de-passe-long-et-aleatoire' > .vault_pass
+# Le mot de passe Vault ne vit plus dans le dépôt : ansible.cfg le lit dans
+# ~/.config/homelab/vault_pass (côté Linux/WSL, hors du disque Windows).
+#   mkdir -p ~/.config/homelab && chmod 700 ~/.config/homelab
+#   printf '%s' 'votre-mot-de-passe-long-et-aleatoire' > ~/.config/homelab/vault_pass
+#   chmod 600 ~/.config/homelab/vault_pass
 remplace-moi-par-un-mot-de-passe-long-et-aleatoire

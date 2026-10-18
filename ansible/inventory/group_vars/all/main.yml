@@ -1,0 +1,20 @@
+---
+# Variables communes à tout le homelab (une seule source de vérité)
+
+homelab_domain: "homelab.local"
+
+# Certificat racine de la step-ca, versionné dans le dépôt
+# (empreinte 334c2853…e494, identique à step_ca_root_fingerprint)
+homelab_ca_cert: "{{ playbook_dir }}/homelab-ca.crt"
+
+# --- step-ca ---
+step_ca_url: "https://ca.{{ homelab_domain }}:9000"
+step_ca_root_fingerprint: "334c2853db23dd68c4df72ae767f34e06bc30dec6379223d2b28cfbd0e69e494"
+step_ca_provisioner: "ansible-cert-issuer"
+step_cli_version: "0.29.0"
+
+# --- OpenBao ---
+openbao_api_url: "https://vault.{{ homelab_domain }}"
+openbao_kv_mount: secret
+# Identifiants de l'AppRole "ansible" : openbao_ansible_role_id et openbao_ansible_secret_id,
+# écrits (chiffrés) dans group_vars/all/openbao.yml par openbao-bootstrap.yml.

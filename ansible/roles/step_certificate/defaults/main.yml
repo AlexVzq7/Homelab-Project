@@ -1,0 +1,19 @@
+---
+# Certificat TLS émis par la step-ca et renouvelé automatiquement par un service systemd.
+# Variables à fournir par le rôle appelant :
+#   step_cert_name        : suffixe des noms (service step-renew-<name>, hook step-renew-<name>-hook.sh)
+#   step_cert_label       : libellé dans la description du service (ex. "LDAP")
+#   step_cert_cn          : nom du certificat (ex. openldap.homelab.local)
+#   step_cert_file / step_key_file / step_ca_file : chemins sur la machine
+#   step_cert_owner / step_cert_group : propriétaire des fichiers
+#   step_cert_reload_cmd  : commande lancée après chaque renouvellement
+# step_ca_url, step_ca_provisioner, step_cli_version et homelab_ca_cert viennent de group_vars/all.
+
+step_cert_dir: "{{ step_cert_file | dirname }}"
+step_cert_dir_owner: root
+step_cert_dir_group: "{{ step_cert_group }}"
+step_cert_dir_mode: "0755"
+step_key_mode: "0600"
+
+step_cli_deb_url: "https://github.com/smallstep/cli/releases/download/v{{ step_cli_version }}/step-cli_{{ step_cli_version }}-1_amd64.deb"
+step_cli_checksums_url: "https://github.com/smallstep/cli/releases/download/v{{ step_cli_version }}/checksums.txt"

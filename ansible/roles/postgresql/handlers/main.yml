@@ -1,0 +1,11 @@
+---
+- name: Redémarrer PostgreSQL
+  ansible.builtin.systemd:
+    name: postgresql
+    state: restarted
+
+# pg_hba.conf est relu sans couper les connexions
+- name: Recharger PostgreSQL
+  ansible.builtin.systemd:
+    name: postgresql
+    state: reloaded

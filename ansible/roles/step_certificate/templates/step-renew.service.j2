@@ -1,0 +1,13 @@
+[Unit]
+Description=Renouvellement automatique du certificat TLS {{ step_cert_label }} (step-ca)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/step ca renew --daemon --ca-url {{ step_ca_url }} --root {{ step_ca_file }} --exec /usr/local/bin/step-renew-{{ step_cert_name }}-hook.sh {{ step_cert_file }} {{ step_key_file }}
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,79 @@
+---
+- name: Télécharger le paquet .deb du CLI step (somme SHA-256 vérifiée)
+  ansible.builtin.get_url:
+    url: "{{ step_cli_deb_url }}"
+    dest: "/tmp/step-cli_{{ step_cli_version }}_amd64.deb"
+    checksum: "sha256:{{ step_cli_checksums_url }}"
+    mode: "0644"
+
+- name: Installer le CLI step
+  ansible.builtin.apt:
+    deb: "/tmp/step-cli_{{ step_cli_version }}_amd64.deb"
+
+- name: Créer le dossier des certificats
+  ansible.builtin.file:
+    path: "{{ step_cert_dir }}"
+    state: directory
+    owner: "{{ step_cert_dir_owner }}"
+    group: "{{ step_cert_dir_group }}"
+    mode: "{{ step_cert_dir_mode }}"
+
+- name: Déposer le certificat racine de la step-ca
+  ansible.builtin.copy:
+    src: "{{ homelab_ca_cert }}"
+    dest: "{{ step_ca_file }}"
+    owner: "{{ step_cert_owner }}"
+    group: "{{ step_cert_group }}"
+    mode: "0644"
+
+- name: Demander le certificat et la clé
+  ansible.builtin.command:
+    cmd: >
+      step ca certificate {{ step_cert_cn }}
+      {{ step_cert_file }}
+      {{ step_key_file }}
+      --ca-url {{ step_ca_url }}
+      --root {{ step_ca_file }}
+      --provisioner {{ step_ca_provisioner }}
+      --password-file /dev/stdin
+      --force
+    stdin: "{{ step_ca_provisioner_password }}"
+    creates: "{{ step_cert_file }}"
+  no_log: true
+
+- name: Appliquer les droits sur le certificat et la clé
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    owner: "{{ step_cert_owner }}"
+    group: "{{ step_cert_group }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ step_cert_file }}", mode: "0644" }
+    - { path: "{{ step_key_file }}", mode: "{{ step_key_mode }}" }
+  # en check mode, le certificat d'une première installation n'existe pas encore
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Déployer le script de hook de renouvellement
+  ansible.builtin.template:
+    src: step-renew-hook.sh.j2
+    dest: "/usr/local/bin/step-renew-{{ step_cert_name }}-hook.sh"
+    owner: root
+    group: root
+    mode: "0750"
+  notify: Redémarrer le renouvellement du certificat
+
+- name: Déployer le service de renouvellement automatique
+  ansible.builtin.template:
+    src: step-renew.service.j2
+    dest: "/etc/systemd/system/step-renew-{{ step_cert_name }}.service"
+    mode: "0644"
+  notify: Redémarrer le renouvellement du certificat
+
+- name: Activer et démarrer le service de renouvellement
+  ansible.builtin.systemd:
+    name: "step-renew-{{ step_cert_name }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  # en check mode, une unité pas encore déployée est introuvable
+  ignore_errors: "{{ ansible_check_mode }}"
