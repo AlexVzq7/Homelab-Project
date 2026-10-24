@@ -1,79 +1,54 @@
-resource "null_resource" "pfsense_config_iso" {
-  triggers = {
-    config_hash = filemd5("${path.module}/config.xml")
-  }
-
-  provisioner "local-exec" {
-    command = <<EOT
-      mkdir -p ${path.module}/iso_root/conf
-      cp ${path.module}/config.xml ${path.module}/iso_root/conf/config.xml
-      genisoimage -V PFSENSE -J -R -o ${path.module}/pfsense-config.iso ${path.module}/iso_root
-      rm -rf ${path.module}/iso_root
-    EOT
-  }
-}
-
-resource "proxmox_virtual_environment_file" "config_drive" {
-  depends_on   = [null_resource.pfsense_config_iso]
-  content_type = "iso"
-  datastore_id = "local"
-  node_name    = var.node_assignment["home"]
-  source_file {
-    path = "${path.module}/pfsense-config.iso"
-  }
-}
-
+# pfSense réel (VM 100), créé à la main puis importé dans le state.
+# Ce code décrit la VM telle qu'elle est, il ne la recrée pas.
 resource "proxmox_virtual_environment_vm" "pfsense" {
-  name        = "pfsense"
-  node_name   = var.node_assignment["home"]
-  started     = true
-  description = "Pfsense firewall for homelab"
+  name       = "Pfsense"
+  node_name  = var.node_assignment["home"]
+  vm_id      = 100
+  started    = true
+  on_boot    = true
+  tags       = []
+  boot_order = ["scsi0", "ide2", "net0"]
+
+  scsi_hardware = "virtio-scsi-single"
 
   cpu {
     cores = 2
-    type  = "host"
+    type  = "x86-64-v2-AES"
   }
 
   memory {
     dedicated = 2048
   }
 
-  clone {
-    node_name    = var.node_assignment["home"]
-    full         = true
-    vm_id        = var.template_vm_id
-    datastore_id = "local-lvm"
+  disk {
+    datastore_id = "local"
+    interface    = "scsi0"
+    file_format  = "qcow2"
+    size         = 32
+    iothread     = true
   }
 
-  agent {
-    enabled = false
-  }
-
+  # WAN
   network_device {
-    bridge = "vmbr0"
-    model  = "virtio"
+    bridge      = "vmbr0"
+    model       = "virtio"
+    firewall    = true
+    mac_address = "BC:24:11:7D:36:48"
   }
 
+  # LAN homelab
   network_device {
-    bridge = "vmbr1"
-    model  = "virtio"
+    bridge      = "VnetLan"
+    model       = "virtio"
+    firewall    = true
+    mac_address = "BC:24:11:96:E1:C9"
   }
 
-  initialization {
-    dns {
-      servers = ["8.8.8.8", "1.1.1.1"]
-    }
-    ip_config {
-      ipv4 {
-        address = "dhcp"
-      }
-    }
+  operating_system {
+    type = "l26"
   }
 
-  cdrom {
-    file_id   = proxmox_virtual_environment_file.config_drive.id
-    interface = "ide2"
+  lifecycle {
+    prevent_destroy = true # jamais de destruction de pfSense par tofu
   }
-
-  boot_order = ["scsi0", "ide2"]
 }

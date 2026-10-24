@@ -78,3 +78,9 @@ variable "dns_servers" {
   type        = list(string)
   default     = ["8.8.8.8", "1.1.1.1"]
 }
+
+variable "state_passphrase" {
+  description = "Passphrase de chiffrement du state, lue dans OpenBao par tofu-homelab"
+  type        = string
+  sensitive   = true
+}

@@ -1,0 +1,33 @@
+#!/bin/bash
+# Géré par Ansible : lance tofu avec les secrets lus dans OpenBao (AppRole tofu).
+# Usage, depuis le dossier d'un stack : tofu-homelab init | plan | apply ...
+set -euo pipefail
+
+api="{{ openbao_api_url }}"
+creds="{{ opentofu_creds_dir }}"
+ca="${creds}/ca.crt"
+
+token=$(jq -n --rawfile r "${creds}/tofu.role_id" --rawfile s "${creds}/tofu.secret_id" \
+          '{role_id: $r, secret_id: $s}' \
+        | curl -sSf --cacert "${ca}" -X POST -d @- "${api}/v1/auth/approle/login" \
+        | jq -er .auth.client_token)
+
+lire() {  # lire <chemin> <champ>
+  curl -sSf --cacert "${ca}" -H "X-Vault-Token: ${token}" \
+    "${api}/v1/{{ openbao_kv_mount }}/data/$1" | jq -er ".data.data[\"$2\"]"
+}
+
+db_password=$(lire infra/tofu/db password)
+export PG_CONN_STR="postgres://tofu:${db_password}@postgres.{{ homelab_domain }}/tfstate?sslmode=verify-full&sslrootcert=${ca}"
+unset db_password
+TF_VAR_state_passphrase=$(lire infra/tofu/state-encryption passphrase)
+TF_VAR_pm_api_token_id=$(lire infra/tofu/proxmox token_id)
+TF_VAR_pm_api_token_secret=$(lire infra/tofu/proxmox token_secret)
+export TF_VAR_state_passphrase TF_VAR_pm_api_token_id TF_VAR_pm_api_token_secret
+
+# Le token ne sert plus : on le révoque tout de suite
+curl -sSf --cacert "${ca}" -H "X-Vault-Token: ${token}" -X POST \
+  "${api}/v1/auth/token/revoke-self" > /dev/null
+unset token
+
+exec tofu "$@"

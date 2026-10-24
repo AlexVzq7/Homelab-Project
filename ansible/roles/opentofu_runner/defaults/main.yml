@@ -1,0 +1,7 @@
+---
+opentofu_version: "1.13.1"  # même version que terraform/proxmox/mise.toml
+opentofu_repo_url: "https://github.com/AlexVzq7/Homelab-Project.git"
+opentofu_repo_dir: /opt/homelab
+opentofu_user: debian
+# role_id, secret_id et ca.crt de l'AppRole tofu, livrés par openbao-approle.yml
+opentofu_creds_dir: /etc/openbao

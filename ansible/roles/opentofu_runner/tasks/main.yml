@@ -1,0 +1,51 @@
+---
+- name: Installer les outils du runner
+  ansible.builtin.apt:
+    name: [git, curl, jq, genisoimage]  # genisoimage : ISO de config du stack pfsense
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Lire la version d'OpenTofu installée
+  ansible.builtin.command: dpkg-query -W -f=${Version} tofu
+  register: opentofu_installed
+  changed_when: false
+  failed_when: false
+
+- name: Télécharger OpenTofu (somme SHA256 vérifiée) {{ opentofu_version }}
+  ansible.builtin.get_url:
+    url: "https://github.com/opentofu/opentofu/releases/download/v{{ opentofu_version }}/tofu_{{ opentofu_version }}_amd64.deb"
+    checksum: "sha256:https://github.com/opentofu/opentofu/releases/download/v{{ opentofu_version }}/tofu_{{ opentofu_version }}_SHA256SUMS"
+    dest: "/tmp/tofu_{{ opentofu_version }}_amd64.deb"
+    mode: "0644"
+  when: opentofu_installed.stdout != opentofu_version
+
+- name: Installer OpenTofu {{ opentofu_version }}
+  ansible.builtin.apt:
+    deb: "/tmp/tofu_{{ opentofu_version }}_amd64.deb"
+  when: opentofu_installed.stdout != opentofu_version
+
+- name: Créer le dossier du dépôt
+  ansible.builtin.file:
+    path: "{{ opentofu_repo_dir }}"
+    state: directory
+    owner: "{{ opentofu_user }}"
+    group: "{{ opentofu_user }}"
+    mode: "0755"
+
+# Clone initial seulement : ensuite, chacun fait git pull avant de lancer tofu
+- name: Cloner le dépôt
+  ansible.builtin.git:
+    repo: "{{ opentofu_repo_url }}"
+    dest: "{{ opentofu_repo_dir }}"
+    update: false
+  become: true
+  become_user: "{{ opentofu_user }}"
+
+- name: Déposer la commande tofu-homelab
+  ansible.builtin.template:
+    src: tofu-homelab.j2
+    dest: /usr/local/bin/tofu-homelab
+    owner: root
+    group: root
+    mode: "0755"

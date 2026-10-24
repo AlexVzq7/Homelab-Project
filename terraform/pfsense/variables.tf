@@ -9,12 +9,6 @@ variable "pm_api_token_id" {
   type        = string
 }
 
-variable "template_vm_id" {
-  description = "ID of the template VM to clone"
-  type        = number
-  default     = 700
-}
-
 variable "pm_api_url" {
   description = "Proxmox API URL"
   type        = string

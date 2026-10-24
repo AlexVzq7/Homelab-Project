@@ -26,3 +26,6 @@
 
 - name: Homelab - Sauvegardes
   import_playbook: backup.yml
+
+- name: Homelab - Runner OpenTofu (state partagé)
+  import_playbook: opentofu.yml

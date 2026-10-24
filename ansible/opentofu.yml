@@ -1,0 +1,6 @@
+---
+- name: Runner OpenTofu (state partagé)
+  hosts: opentofu_server
+  become: true
+  roles:
+    - opentofu_runner

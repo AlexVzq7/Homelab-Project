@@ -1,5 +1,31 @@
 terraform {
-  required_version = ">= 1.6.0"
+
+  required_version = ">= 1.8.0"
+
+  backend "pg" {
+    schema_name = "proxmox"
+  }
+
+  encryption {
+    key_provider "pbkdf2" "state" {
+      passphrase = var.state_passphrase
+    }
+    method "aes_gcm" "state" {
+      keys = key_provider.pbkdf2.state
+    }
+    method "unencrypted" "migration" {}
+
+    state {
+      method = method.aes_gcm.state
+      fallback {
+        method = method.unencrypted.migration
+      }
+    }
+    plan {
+      method   = method.aes_gcm.state
+      enforced = true
+    }
+  }
 
   required_providers {
     proxmox = {
