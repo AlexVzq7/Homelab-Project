@@ -13,14 +13,10 @@ terraform {
     method "aes_gcm" "state" {
       keys = key_provider.pbkdf2.state
     }
-    # Migration seulement : permet de relire le state local, pas encore chiffré
-    method "unencrypted" "migration" {}
 
     state {
-      method = method.aes_gcm.state
-      fallback {
-        method = method.unencrypted.migration
-      }
+      method   = method.aes_gcm.state
+      enforced = true
     }
     plan {
       method   = method.aes_gcm.state
