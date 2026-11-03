@@ -81,4 +81,17 @@ vms = {
     node        = "home"
     bridge      = "VnetLan"
   }
+  "awx" = {
+    vm_id       = 407
+    description = "AWX sur k3s"
+    template    = "debian"
+    cores       = 4
+    memory      = 6144
+    disk_size   = 30
+    ip          = "192.168.1.109/24"
+    username    = "debian"
+    node        = "homelab" # où la VM va tourner
+    clone_node  = "home"    # où se trouve le template debian (400)
+    bridge      = "VnetLan"
+  }
 }
