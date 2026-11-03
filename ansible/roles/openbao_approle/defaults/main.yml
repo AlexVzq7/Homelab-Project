@@ -2,6 +2,10 @@
 # true = génère et livre un nouveau secret_id même si le fichier existe déjà
 openbao_approle_rotate: false
 
+# Un secret_id qui expire dans moins de N jours est remplacé (et un secret_id inconnu
+# d'OpenBao aussi). Il faut relancer openbao-approle.yml au moins une fois par semaine.
+openbao_approle_renew_before_days: 10
+
 openbao_approles:
   - name: tofu
     policy_name: tofu-state

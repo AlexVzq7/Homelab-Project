@@ -100,11 +100,62 @@
   become: true
   register: approle_secret_id_file
 
-- name: Générer un secret_id (absent ou rotation demandée)
+- name: Lire le secret_id livré
+  ansible.builtin.slurp:
+    src: "{{ approle.deliver_dir }}/{{ approle.name }}.secret_id"
+  delegate_to: "{{ groups[approle.deliver_group][0] }}"
+  become: true
+  register: approle_current_secret_id
+  when: approle_secret_id_file.stat.exists
+  no_log: true
+
+# Demande à OpenBao si ce secret_id existe encore et quand il expire.
+# Réponse vide = secret_id inconnu (expiré, détruit ou jamais créé).
+- name: "Vérifier auprès d'OpenBao la validité du secret_id {{ approle.name }}"
+  community.hashi_vault.vault_write:
+    path: "auth/approle/role/{{ approle.name }}/secret-id/lookup"
+    data:
+      secret_id: "{{ approle_current_secret_id.content | b64decode | trim }}"
+  register: approle_secret_id_lookup
+  when: approle_secret_id_file.stat.exists
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Décider s'il faut un nouveau secret_id
+  vars:
+    _info: "{{ (approle_secret_id_lookup.data | default({}, true)).get('data') or {} }}"
+    _expiration: "{{ _info.get('expiration_time', '') }}"
+    # secret_id_ttl 0 : OpenBao renvoie la date 0001-01-01, le secret_id n'expire jamais
+    _never_expires: "{{ _expiration.startswith('0001-') }}"
+    _days_left: >-
+      {{ ((_expiration[:19] | to_datetime('%Y-%m-%dT%H:%M:%S'))
+          - (now(utc=true).replace(tzinfo=None))).total_seconds() / 86400
+         if (_expiration | length > 0 and not _never_expires | bool) else 9999 }}
+  ansible.builtin.set_fact:
+    approle_secret_id_valid: "{{ _info | length > 0 }}"
+    approle_secret_id_days_left: "{{ _days_left | float | round(1) }}"
+    approle_needs_secret_id: >-
+      {{ not approle_secret_id_file.stat.exists
+         or openbao_approle_rotate | bool
+         or _info | length == 0
+         or (_days_left | float) < (openbao_approle_renew_before_days | float) }}
+
+- name: "État du secret_id {{ approle.name }}"
+  ansible.builtin.debug:
+    msg: >-
+      fichier présent={{ approle_secret_id_file.stat.exists }},
+      valide={{ approle_secret_id_valid }},
+      jours restants={{ approle_secret_id_days_left }},
+      renouvellement={{ approle_needs_secret_id }}
+
+- name: "Générer un nouveau secret_id {{ approle.name }}"
   community.hashi_vault.vault_write:
     path: "auth/approle/role/{{ approle.name }}/secret-id"
-    data: {}
-  when: not approle_secret_id_file.stat.exists or openbao_approle_rotate | bool
+    data:
+      metadata: '{"source": "openbao-approle"}'
+  when: approle_needs_secret_id | bool
   register: approle_new_secret_id
   no_log: true
 
@@ -117,4 +168,16 @@
   when: approle_new_secret_id is changed and not ansible_check_mode
   delegate_to: "{{ groups[approle.deliver_group][0] }}"
   become: true
+  no_log: true
+
+# L'ancien secret_id encore valide ne doit pas rester utilisable après la rotation
+- name: Détruire l'ancien secret_id
+  community.hashi_vault.vault_write:
+    path: "auth/approle/role/{{ approle.name }}/secret-id/destroy"
+    data:
+      secret_id: "{{ approle_current_secret_id.content | b64decode | trim }}"
+  when:
+    - approle_new_secret_id is changed
+    - not ansible_check_mode
+    - approle_secret_id_valid | bool
   no_log: true
