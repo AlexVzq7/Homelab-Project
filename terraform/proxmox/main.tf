@@ -5,6 +5,9 @@ resource "proxmox_virtual_environment_vm" "vm" {
   description = each.value.description
   vm_id       = each.value.vm_id
 
+  timeout_clone   = 3600
+  timeout_migrate = 3600
+
   cpu {
     cores = each.value.cores
     type  = "host"
